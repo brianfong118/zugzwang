@@ -5,6 +5,8 @@ Decisions and their reasons. When a decision changes, mark the old one supersede
 ## Toolchain
 - C++20, CMake, Ninja. GCC/Clang via MSYS2 UCRT64 on Windows; GCC on Linux CI. One compiler family means one flag set shared by dev machine and CI: `-O3 -march=native` in Release; `-fsanitize=address,undefined` in Debug on Linux (MinGW GCC lacks ASan, so CI runs the sanitizers).
 - `<bit>` over intrinsics: portable, identical codegen at `-O3`.
+- Flags live on one `zugzwang_options` INTERFACE target that every executable links, so the engine and the tests are always built the same way.
+- MinGW builds link `-static`. The engine binary is copied next to lichess-bot and must not depend on whichever MSYS2 runtime DLLs are on PATH; a toolchain newer than the installed `libstdc++-6.dll` otherwise fails at load with `STATUS_ENTRYPOINT_NOT_FOUND`.
 - Catch2 via FetchContent. Perft is the primary correctness check; unit tests cover FEN round-trips, UCI parsing and eval symmetry (mirrored position, negated score).
 - CI builds Release and Debug on every push and runs the tests under sanitizers, excluding `[slow]` perft cases.
 

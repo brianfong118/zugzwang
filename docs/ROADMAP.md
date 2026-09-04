@@ -3,7 +3,7 @@
 Tick items as they land. Versions are git tags created by the user.
 
 ## v0.1 — Board and move generation
-- [ ] CMake project builds `zugzwang` and `zugzwang_tests` with the commands in CLAUDE.md
+- [x] CMake project builds `zugzwang` and `zugzwang_tests` with the commands in CLAUDE.md
 - [ ] Bitboard board state, FEN parse/print
 - [ ] Attack tables, magics for sliders
 - [ ] Move generation, make/unmake, Zobrist

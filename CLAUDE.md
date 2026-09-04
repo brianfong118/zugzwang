@@ -40,4 +40,4 @@ Slash commands: `/perft`, `/bench`, `/sprt [baseline] [elo1]`.
 - Tests in `engine/tests/` with Catch2. Perft expected counts are never edited to make a test pass.
 
 ## Working with the user
-He knows minimax, alpha-beta, transposition tables and Zobrist hashing; skip explaining those. Explain design choices and trade-offs, briefly. He writes almost none of the code himself, so keep code self-explanatory.
+Explain important key concepts, design decision and important syntax in the chat
