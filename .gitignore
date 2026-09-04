@@ -1,0 +1,32 @@
+# Build
+build/
+*.exe
+*.o
+*.obj
+
+# Claude Code local overrides
+.claude/settings.local.json
+
+# Lichess bridge: contains the API token
+lichess-bot/
+
+# Testing artefacts
+baseline/
+sprt/
+tools/*.epd
+tools/*.pgn
+*.pgn
+
+# Trainer
+trainer/data/
+trainer/checkpoints/
+trainer/runs/
+*.nnue
+*.bin
+__pycache__/
+.venv/
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store

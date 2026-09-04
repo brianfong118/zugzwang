@@ -1,0 +1,24 @@
+name: CI
+on: [push, pull_request]
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        build_type: [Release, Debug]
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y ninja-build
+      - run: cmake -S engine -B build -G Ninja -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+      - run: cmake --build build
+      - run: ./build/zugzwang_tests "~[slow]"
+        if: matrix.build_type == 'Debug'
+      - run: ./build/zugzwang_tests
+        if: matrix.build_type == 'Release'
+
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: find engine -name '*.cpp' -o -name '*.h' | xargs -r clang-format --dry-run --Werror
