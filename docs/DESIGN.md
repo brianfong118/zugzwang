@@ -6,13 +6,18 @@ Decisions and their reasons. When a decision changes, mark the old one supersede
 - C++20, CMake, Ninja. GCC/Clang via MSYS2 UCRT64 on Windows; GCC on Linux CI. One compiler family means one flag set shared by dev machine and CI: `-O3 -march=native` in Release; `-fsanitize=address,undefined` in Debug on Linux (MinGW GCC lacks ASan, so CI runs the sanitizers).
 - `<bit>` over intrinsics: portable, identical codegen at `-O3`.
 - Flags live on one `zugzwang_options` INTERFACE target that every executable links, so the engine and the tests are always built the same way.
+- Engine sources compile once into a static library `zugzwang_core`; `main.cpp` holds only the entry point. The test binary links the same objects the engine ships, and supplies its own `main` so it can run `attacks::init()` before Catch2 starts.
 - MinGW builds link `-static`. The engine binary is copied next to lichess-bot and must not depend on whichever MSYS2 runtime DLLs are on PATH; a toolchain newer than the installed `libstdc++-6.dll` otherwise fails at load with `STATUS_ENTRYPOINT_NOT_FOUND`.
 - Catch2 via FetchContent. Perft is the primary correctness check; unit tests cover FEN round-trips, UCI parsing and eval symmetry (mirrored position, negated score).
 - CI builds Release and Debug on every push and runs the tests under sanitizers, excluding `[slow]` perft cases.
 
 ## Board
 - Bitboards: one per piece type per colour, two colour occupancies, plus a 64-entry mailbox so piece-at-square is a lookup, not a 12-bitboard scan.
-- Magic bitboards for sliders, magics found at startup. Avoids committing a table; the cost is milliseconds. PEXT can be added behind an `#ifdef` later.
+- Magic bitboards for sliders, magics found at startup. Avoids committing a table; measured cost is ~100 ms per process with an untuned seed (rooks need ~1M candidate multipliers, bishops ~80k). Per-rank tuned seeds would cut that to ~10 ms if startup time ever matters; it does not for lichess-bot or SPRT. PEXT can be added behind an `#ifdef` later.
+- Leaper tables (pawn, knight, king) are `constexpr`: zero startup cost and testable with `STATIC_REQUIRE`. Slider tables cannot be, since the random magic search exceeds compile-time evaluation limits.
+- `attacks::init()` is explicit, called from `main()` and the test main, rather than a static initialiser. Nothing that runs during static initialisation can then depend on the tables being ready.
+- Slider lookups stay inline in the header (`Magic` table declared `extern`) because they sit on the move-generation hot path; the search that fills the tables lives in the `.cpp`.
+- One fixed-seed SplitMix64 PRNG (`prng.h`) serves magic search and Zobrist keys: the same magics and hashes every run, so bench and hash-dependent behaviour are reproducible.
 - Make/unmake with an undo stack rather than copy-make: cheaper once state grows to include NNUE accumulators.
 - Zobrist hash updated incrementally from day 1: needed for repetition detection in v1 and the TT in v1.1.
 - 16-bit moves (from, to, 4 flag bits for promotion/castling/en passant). Compact in move lists and TT entries.

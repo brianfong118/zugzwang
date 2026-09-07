@@ -5,6 +5,7 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set(CMAKE_BUILD_TYPE Release CACHE STRING "" FORCE)
 endif()
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -26,8 +27,13 @@ target_link_options(zugzwang_options INTERFACE
 target_compile_definitions(zugzwang_options INTERFACE
     ZUGZWANG_VERSION="${PROJECT_VERSION}")
 
+add_library(zugzwang_core STATIC
+    src/attacks.cpp)
+target_include_directories(zugzwang_core PUBLIC src)
+target_link_libraries(zugzwang_core PUBLIC zugzwang_options)
+
 add_executable(zugzwang src/main.cpp)
-target_link_libraries(zugzwang PRIVATE zugzwang_options)
+target_link_libraries(zugzwang PRIVATE zugzwang_core)
 
 include(FetchContent)
 FetchContent_Declare(Catch2
@@ -37,5 +43,8 @@ FetchContent_Declare(Catch2
     SYSTEM)
 FetchContent_MakeAvailable(Catch2)
 
-add_executable(zugzwang_tests tests/toolchain_test.cpp)
-target_link_libraries(zugzwang_tests PRIVATE zugzwang_options Catch2::Catch2WithMain)
+add_executable(zugzwang_tests
+    tests/main.cpp
+    tests/toolchain_test.cpp
+    tests/attacks_test.cpp)
+target_link_libraries(zugzwang_tests PRIVATE zugzwang_core Catch2::Catch2)
