@@ -22,6 +22,9 @@ Decisions and their reasons. When a decision changes, mark the old one supersede
 - Zobrist hash updated incrementally from day 1: needed for repetition detection in v1 and the TT in v1.1.
 - 16-bit moves (from, to, 4 flag bits for promotion/castling/en passant). Compact in move lists and TT entries.
 - Pseudo-legal generation, legality checked in make. Simpler than legal generation; the wasted work is small.
+- `Position::fromFen` returns `std::optional` rather than throwing: the UCI loop must survive a bad `position` command, and the codebase has no exceptions. Validation is structural only: eight ranks of eight, exactly one king per side, no pawns on the back ranks, en passant square on the correct rank with the pushed pawn behind it. A castling right whose king or rook is not on its home square is dropped rather than rejected (as Stockfish does), so the board guarantees the invariant "right set ⇒ king and rook at home" and castling generation need not re-check it.
+- The en passant square is stored and printed as given, but hashed only when a pawn of the side to move can actually capture. FIDE repetition compares the set of legal moves, so an uncapturable ep square must not distinguish two otherwise identical positions.
+- Zobrist keys are a `constexpr` table generated from the fixed-seed PRNG; the sixteen castling keys are indexed by the rights mask so an update is `key ^= castling[old] ^ castling[new]`. Piece placement updates the key incrementally from the first `putPiece`; `computeKey()` recomputes from scratch and exists only to check the incremental key in tests and debug builds.
 
 ## Search
 - v1: iterative deepening, negamax alpha-beta, quiescence (captures only, stand-pat), MVV-LVA ordering. Quiescence is in v1 because material-only eval without it hangs pieces at the horizon and the bot would look broken rather than weak.

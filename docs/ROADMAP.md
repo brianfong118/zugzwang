@@ -4,9 +4,10 @@ Tick items as they land. Versions are git tags created by the user.
 
 ## v0.1 — Board and move generation
 - [x] CMake project builds `zugzwang` and `zugzwang_tests` with the commands in CLAUDE.md
-- [ ] Bitboard board state, FEN parse/print
+- [x] Bitboard board state, FEN parse/print
 - [x] Attack tables, magics for sliders
-- [ ] Move generation, make/unmake, Zobrist
+- [x] Zobrist keys
+- [ ] Move generation, make/unmake
 - [ ] `perft <depth>` with divide output
 - [ ] Perft suite passes: start position d6, Kiwipete d5, CPW positions 3–6
 - [ ] CI green

@@ -48,6 +48,10 @@ enum Direction : int {
     kSouthWest = -9
 };
 
+constexpr Square operator+(Square s, Direction d) {
+    return Square(int(s) + int(d));
+}
+
 // Masks the edge file first so pieces never wrap from the h-file onto the a-file.
 template <Direction D> constexpr Bitboard shift(Bitboard b) {
     if constexpr (D == kNorth)

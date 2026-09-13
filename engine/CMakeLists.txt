@@ -28,7 +28,8 @@ target_compile_definitions(zugzwang_options INTERFACE
     ZUGZWANG_VERSION="${PROJECT_VERSION}")
 
 add_library(zugzwang_core STATIC
-    src/attacks.cpp)
+    src/attacks.cpp
+    src/position.cpp)
 target_include_directories(zugzwang_core PUBLIC src)
 target_link_libraries(zugzwang_core PUBLIC zugzwang_options)
 
@@ -46,5 +47,6 @@ FetchContent_MakeAvailable(Catch2)
 add_executable(zugzwang_tests
     tests/main.cpp
     tests/toolchain_test.cpp
-    tests/attacks_test.cpp)
+    tests/attacks_test.cpp
+    tests/position_test.cpp)
 target_link_libraries(zugzwang_tests PRIVATE zugzwang_core Catch2::Catch2)

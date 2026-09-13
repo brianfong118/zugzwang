@@ -5,6 +5,8 @@
 
 namespace zugzwang {
 
+using Key = std::uint64_t;
+
 enum Color : std::uint8_t { kWhite, kBlack };
 
 enum PieceType : std::uint8_t { kPawn, kKnight, kBishop, kRook, kQueen, kKing, kNoPieceType };
