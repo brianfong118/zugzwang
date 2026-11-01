@@ -1,3 +1,4 @@
+#include "test_util.h"
 #include "uci.h"
 
 #include <catch2/catch_test_macros.hpp>
@@ -14,7 +15,7 @@ using Catch::Matchers::EndsWith;
 
 namespace {
 
-constexpr std::string_view kStartTotal = "Nodes searched: 20\n";
+const std::string kStartTotal = "Nodes searched: 20\n";
 
 std::string run(std::string_view commands) {
     std::istringstream in{std::string(commands)};
@@ -35,28 +36,28 @@ TEST_CASE("perft prints each root move and the total", "[uci]") {
 }
 
 TEST_CASE("position sets up FENs and plays moves", "[uci]") {
-    CHECK_THAT(run("perft 1\n"), EndsWith(std::string(kStartTotal)));
-    CHECK_THAT(run("position startpos\nperft 1\n"), EndsWith(std::string(kStartTotal)));
+    CHECK_THAT(run("perft 1\n"), EndsWith(kStartTotal));
+    CHECK_THAT(run("position startpos\nperft 1\n"), EndsWith(kStartTotal));
     CHECK_THAT(run("position startpos moves e2e4 e7e5 g1f3\nperft 1\n"),
                EndsWith("Nodes searched: 29\n"));
-    CHECK_THAT(run("position fen r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - "
-                   "0 1\nperft 1\n"),
+    CHECK_THAT(run("position fen " + std::string(kKiwipete) + "\nperft 1\n"),
                EndsWith("Nodes searched: 48\n"));
 }
 
 TEST_CASE("move text resolves to the right special move", "[uci]") {
-    // Each total differs if the special part of the move is lost: a promoted queen checks e8, the
-    // d5 pawn is gone, and the rook on f1 covers f7 and f8.
+    // The new queen checks e8, which leaves the king three moves.
     CHECK_THAT(run("position fen 4k3/P7/8/8/8/8/8/4K3 w - - 0 1 moves a7a8q\nperft 1\n"),
                EndsWith("Nodes searched: 3\n"));
+    // The captured d5 pawn is gone, so it has no move of its own.
     CHECK_THAT(run("position fen 4k3/8/8/3pP3/8/8/8/4K3 w - d6 0 2 moves e5d6\nperft 1\n"),
                EndsWith("Nodes searched: 4\n"));
+    // The rook now on f1 takes f7 and f8 from the king and stops black castling short.
     CHECK_THAT(run("position fen r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1 moves e1g1\nperft 1\n"),
                EndsWith("Nodes searched: 23\n"));
 }
 
 TEST_CASE("a bad position command reports it and keeps the current position", "[uci]") {
-    for (std::string_view bad : {
+    for (std::string bad : {
              "position",
              "position nonsense",
              "position fen",
@@ -69,16 +70,16 @@ TEST_CASE("a bad position command reports it and keeps the current position", "[
              "position fen krKQQQQQ/PrQ4Q/QQ5Q/Q6Q/Q6Q/Q6Q/Q6Q/QQQQQQQQ w - - 0 1", // too many
          }) {
         CAPTURE(bad);
-        std::string output = run(std::string(bad) + "\nperft 1\n");
+        std::string output = run(bad + "\nperft 1\n");
         CHECK_THAT(output, ContainsSubstring("info string invalid position"));
-        CHECK_THAT(output, EndsWith(std::string(kStartTotal)));
+        CHECK_THAT(output, EndsWith(kStartTotal));
     }
 }
 
 TEST_CASE("perft rejects a missing or invalid depth", "[uci]") {
-    for (std::string_view bad : {"perft", "perft 0", "perft -1", "perft x"}) {
+    for (std::string bad : {"perft", "perft 0", "perft -1", "perft x"}) {
         CAPTURE(bad);
-        CHECK_THAT(run(std::string(bad) + "\n"), ContainsSubstring("info string perft needs"));
+        CHECK_THAT(run(bad + "\n"), ContainsSubstring("info string perft needs"));
     }
 }
 
@@ -86,5 +87,5 @@ TEST_CASE("the loop ignores unknown input and stops at quit", "[uci]") {
     CHECK(run("").empty());
     CHECK(run("\n   \nnonsense\n").empty());
     CHECK(run("quit\nperft 1\n").empty());
-    CHECK_THAT(run("perft 1\r\nquit\r\n"), EndsWith(std::string(kStartTotal)));
+    CHECK_THAT(run("perft 1\r\nquit\r\n"), EndsWith(kStartTotal));
 }

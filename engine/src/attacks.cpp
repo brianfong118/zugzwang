@@ -22,8 +22,7 @@ void initMagics(std::span<const Delta> deltas, std::array<Magic, 64>& magics, Bi
 
     for (int sq = 0; sq < 64; ++sq) {
         Square s = Square(sq);
-        // An edge square blocks nothing beyond it, so dropping edges from the mask shrinks the
-        // table.
+        // An edge square blocks nothing beyond it, so leaving edges out shrinks the table.
         Bitboard edges =
             ((kRank1 | kRank8) & ~rankBb(rankOf(s))) | ((kFileA | kFileH) & ~fileBb(fileOf(s)));
         Magic& m = magics[sq];
@@ -41,8 +40,7 @@ void initMagics(std::span<const Delta> deltas, std::array<Magic, 64>& magics, Bi
         } while (occ);
         table += n;
 
-        // Two occupancies may share a slot only if they produce the same attacks. epoch[] records
-        // which attempt last wrote each slot, so a failed attempt needs no table clearing.
+        // Slots may collide only on equal attacks; epoch[] spares clearing after a failed attempt.
         for (int i = 0; i < n;) {
             for (m.magic = 0; std::popcount((m.magic * m.mask) >> 56) < 6;)
                 m.magic = rng.sparse();

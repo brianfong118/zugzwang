@@ -1,12 +1,12 @@
 #pragma once
 
-#include "attacks.h"
 #include "bitboard.h"
 #include "move.h"
 #include "types.h"
-#include "zobrist.h"
 
 #include <array>
+#include <cstddef>
+#include <cstdint>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -14,17 +14,25 @@
 
 namespace zugzwang {
 
+struct CastlingRule {
+    CastlingRights right;
+    Square kingFrom, kingTo, rookFrom, rookTo;
+    Bitboard mustBeEmpty;
+};
+
+// By colour. The king never crosses b1 or b8, but the rook does, so those must be empty too.
+inline constexpr std::array<std::array<CastlingRule, 2>, 2> kCastlingRules{
+    {{{{kWhiteKingSide, kE1, kG1, kH1, kF1, squareBb(kF1) | squareBb(kG1)},
+       {kWhiteQueenSide, kE1, kC1, kA1, kD1, squareBb(kB1) | squareBb(kC1) | squareBb(kD1)}}},
+     {{{kBlackKingSide, kE8, kG8, kH8, kF8, squareBb(kF8) | squareBb(kG8)},
+       {kBlackQueenSide, kE8, kC8, kA8, kD8, squareBb(kB8) | squareBb(kC8) | squareBb(kD8)}}}}};
+
 class Position {
   public:
     static constexpr std::string_view kStartFen =
         "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
-    Position() {
-        board_.fill(kNoPiece);
-        history_.reserve(kHistoryReserve);
-    }
-
-    // Empty on a FEN that is malformed or structurally illegal (see DESIGN.md for what is checked).
+    // The only way to create a Position; empty if the FEN is malformed or illegal (see DESIGN.md).
     static std::optional<Position> fromFen(std::string_view fen);
     std::string fen() const;
 
@@ -40,13 +48,9 @@ class Position {
     int castlingRights() const { return castling_; }
     Square epSquare() const { return epSquare_; }
     int halfmoveClock() const { return halfmoveClock_; }
-    int fullmoveNumber() const { return fullmoveNumber_; }
     Key key() const { return key_; }
 
-    // Attackers of both colours; pass a custom occupancy to see through a moving piece.
-    Bitboard attackersTo(Square s, Bitboard occupied) const;
-    Bitboard attackersTo(Square s) const { return attackersTo(s, occupied()); }
-    bool isAttacked(Square s, Color by) const { return attackersTo(s) & pieces(by); }
+    bool isAttacked(Square s, Color by) const;
     bool inCheck() const { return isAttacked(kingSquare(sideToMove_), ~sideToMove_); }
 
     // m must come from generateMoves. If it is illegal, returns false with the position unchanged.
@@ -69,24 +73,14 @@ class Position {
     // Enough that make does not reallocate in any realistic game plus search.
     static constexpr std::size_t kHistoryReserve = 1024;
 
-    void putPiece(Piece p, Square s) {
-        byPiece_[p] |= squareBb(s);
-        byColor_[colorOf(p)] |= squareBb(s);
-        board_[s] = p;
-        key_ ^= zobrist::piece(p, s);
+    Position() {
+        board_.fill(kNoPiece);
+        history_.reserve(kHistoryReserve);
     }
-    void removePiece(Square s) {
-        Piece p = board_[s];
-        byPiece_[p] &= ~squareBb(s);
-        byColor_[colorOf(p)] &= ~squareBb(s);
-        board_[s] = kNoPiece;
-        key_ ^= zobrist::piece(p, s);
-    }
-    Key epKey() const {
-        bool capturable = epSquare_ != kNoSquare &&
-                          (attacks::pawn(~sideToMove_, epSquare_) & pieces(sideToMove_, kPawn));
-        return capturable ? zobrist::enPassant(fileOf(epSquare_)) : 0;
-    }
+
+    void putPiece(Piece p, Square s);
+    void removePiece(Square s);
+    Key epKey() const;
 
     std::vector<Undo> history_;
     std::array<Bitboard, 12> byPiece_{};

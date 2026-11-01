@@ -48,8 +48,7 @@ enum CastlingRights : std::uint8_t {
     kWhiteKingSide = 1,
     kWhiteQueenSide = 2,
     kBlackKingSide = 4,
-    kBlackQueenSide = 8,
-    kAnyCastling = 15
+    kBlackQueenSide = 8
 };
 
 constexpr Color operator~(Color c) {

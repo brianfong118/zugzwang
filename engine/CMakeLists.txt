@@ -14,18 +14,14 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(kSanitize $<AND:$<CONFIG:Debug>,$<PLATFORM_ID:Linux>>)
 
 add_library(zugzwang_options INTERFACE)
-target_compile_features(zugzwang_options INTERFACE cxx_std_20)
 target_compile_options(zugzwang_options INTERFACE
     -Wall -Wextra
-    $<$<CONFIG:Release>:-O3;-march=native>
+    $<$<CONFIG:Release>:-march=native>
     $<${kSanitize}:-fsanitize=address,undefined;-fno-omit-frame-pointer>)
-# Static runtimes on Windows: the binary is copied next to lichess-bot and must not depend on
-# whichever MSYS2 DLLs happen to be on PATH.
+# Static runtimes on Windows, because the binary is copied next to lichess-bot, away from MSYS2.
 target_link_options(zugzwang_options INTERFACE
     $<$<BOOL:${MINGW}>:-static>
     $<${kSanitize}:-fsanitize=address,undefined>)
-target_compile_definitions(zugzwang_options INTERFACE
-    ZUGZWANG_VERSION="${PROJECT_VERSION}")
 
 add_library(zugzwang_core STATIC
     src/attacks.cpp
@@ -38,6 +34,7 @@ target_link_libraries(zugzwang_core PUBLIC zugzwang_options)
 
 add_executable(zugzwang src/main.cpp)
 target_link_libraries(zugzwang PRIVATE zugzwang_core)
+target_compile_definitions(zugzwang PRIVATE ZUGZWANG_VERSION="${PROJECT_VERSION}")
 
 include(FetchContent)
 FetchContent_Declare(Catch2

@@ -1,24 +1,12 @@
 #include "movegen.h"
 
-#include <array>
+#include "attacks.h"
+
 #include <initializer_list>
 
 namespace zugzwang {
 
 namespace {
-
-struct CastlingOption {
-    CastlingRights right;
-    Square from, to;
-    Bitboard mustBeEmpty;
-};
-
-// The king never crosses b1 or b8, but the rook does, so those squares must be empty too.
-constexpr std::array<std::array<CastlingOption, 2>, 2> kCastlingOptions{
-    {{{{kWhiteKingSide, kE1, kG1, squareBb(kF1) | squareBb(kG1)},
-       {kWhiteQueenSide, kE1, kC1, squareBb(kB1) | squareBb(kC1) | squareBb(kD1)}}},
-     {{{kBlackKingSide, kE8, kG8, squareBb(kF8) | squareBb(kG8)},
-       {kBlackQueenSide, kE8, kC8, squareBb(kB8) | squareBb(kC8) | squareBb(kD8)}}}}};
 
 // delta is the signed distance every pawn in the set travelled, which recovers its origin.
 void addPawnTargets(Bitboard targets, int delta, MoveList& moves) {
@@ -59,15 +47,6 @@ template <Color Us> void addPawnMoves(const Position& pos, MoveList& moves) {
     }
 }
 
-template <typename AttacksFrom>
-void addPieceMoves(Bitboard pieces, Bitboard targets, AttacksFrom attacksFrom, MoveList& moves) {
-    while (pieces) {
-        Square from = popLsb(pieces);
-        for (Bitboard b = attacksFrom(from) & targets; b;)
-            moves.add(Move(from, popLsb(b)));
-    }
-}
-
 } // namespace
 
 MoveList generateMoves(const Position& pos) {
@@ -81,22 +60,22 @@ MoveList generateMoves(const Position& pos) {
     else
         addPawnMoves<kBlack>(pos, moves);
 
-    addPieceMoves(
-        pos.pieces(us, kKnight), targets, [](Square s) { return attacks::knight(s); }, moves);
-    addPieceMoves(
-        pos.pieces(us, kBishop), targets, [=](Square s) { return attacks::bishop(s, occupied); },
-        moves);
-    addPieceMoves(
-        pos.pieces(us, kRook), targets, [=](Square s) { return attacks::rook(s, occupied); },
-        moves);
-    addPieceMoves(
-        pos.pieces(us, kQueen), targets, [=](Square s) { return attacks::queen(s, occupied); },
-        moves);
-    addPieceMoves(pos.pieces(us, kKing), targets, [](Square s) { return attacks::king(s); }, moves);
+    auto addPieceMoves = [&](PieceType pt, auto attacksFrom) {
+        for (Bitboard pieces = pos.pieces(us, pt); pieces;) {
+            Square from = popLsb(pieces);
+            for (Bitboard b = attacksFrom(from) & targets; b;)
+                moves.add(Move(from, popLsb(b)));
+        }
+    };
+    addPieceMoves(kKnight, [](Square s) { return attacks::knight(s); });
+    addPieceMoves(kBishop, [=](Square s) { return attacks::bishop(s, occupied); });
+    addPieceMoves(kRook, [=](Square s) { return attacks::rook(s, occupied); });
+    addPieceMoves(kQueen, [=](Square s) { return attacks::queen(s, occupied); });
+    addPieceMoves(kKing, [](Square s) { return attacks::king(s); });
 
-    for (const CastlingOption& c : kCastlingOptions[us])
-        if ((pos.castlingRights() & c.right) && !(occupied & c.mustBeEmpty))
-            moves.add(Move(c.from, c.to, kCastling));
+    for (const CastlingRule& rule : kCastlingRules[us])
+        if ((pos.castlingRights() & rule.right) && !(occupied & rule.mustBeEmpty))
+            moves.add(Move(rule.kingFrom, rule.kingTo, kCastling));
 
     return moves;
 }

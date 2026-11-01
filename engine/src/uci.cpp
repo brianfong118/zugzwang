@@ -55,9 +55,9 @@ void uciLoop(std::istream& in, std::ostream& out) {
         std::string command;
         args >> command;
 
-        if (command == "quit") {
-            break;
-        } else if (command == "position") {
+        if (command == "quit") break;
+
+        if (command == "position") {
             if (std::optional<Position> next = parsePosition(args))
                 pos = std::move(*next);
             else

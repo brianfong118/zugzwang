@@ -1,5 +1,8 @@
 #include "position.h"
 
+#include "attacks.h"
+#include "zobrist.h"
+
 #include <bit>
 #include <cctype>
 #include <charconv>
@@ -10,27 +13,24 @@ namespace zugzwang {
 namespace {
 
 constexpr std::string_view kPieceChars = "PNBRQKpnbrqk";
+// The character at index i stands for the castling right 1 << i.
+constexpr std::string_view kCastlingChars = "KQkq";
 
 // A move from or onto one of these squares ends the rights that need a piece to stay there.
 constexpr std::array<std::uint8_t, 64> kRightsLost = [] {
     std::array<std::uint8_t, 64> lost{};
-    lost[kE1] = kWhiteKingSide | kWhiteQueenSide;
-    lost[kH1] = kWhiteKingSide;
-    lost[kA1] = kWhiteQueenSide;
-    lost[kE8] = kBlackKingSide | kBlackQueenSide;
-    lost[kH8] = kBlackKingSide;
-    lost[kA8] = kBlackQueenSide;
+    for (const auto& rules : kCastlingRules) {
+        for (const CastlingRule& rule : rules) {
+            lost[rule.kingFrom] |= rule.right;
+            lost[rule.rookFrom] |= rule.right;
+        }
+    }
     return lost;
 }();
 
-struct RookMove {
-    Square from, to;
-};
-
-constexpr RookMove castlingRook(Square kingTo) {
-    int rank = rankOf(kingTo);
-    return fileOf(kingTo) == 6 ? RookMove{makeSquare(7, rank), makeSquare(5, rank)}
-                               : RookMove{makeSquare(0, rank), makeSquare(3, rank)};
+constexpr const CastlingRule& castlingRule(Color c, Square kingTo) {
+    const auto& rules = kCastlingRules[c];
+    return rules[0].kingTo == kingTo ? rules[0] : rules[1];
 }
 
 // The square between the ends of a double push or a castling king move.
@@ -54,6 +54,27 @@ bool parseInt(std::string_view s, int& out) {
 }
 
 } // namespace
+
+void Position::putPiece(Piece p, Square s) {
+    byPiece_[p] |= squareBb(s);
+    byColor_[colorOf(p)] |= squareBb(s);
+    board_[s] = p;
+    key_ ^= zobrist::piece(p, s);
+}
+
+void Position::removePiece(Square s) {
+    Piece p = board_[s];
+    byPiece_[p] &= ~squareBb(s);
+    byColor_[colorOf(p)] &= ~squareBb(s);
+    board_[s] = kNoPiece;
+    key_ ^= zobrist::piece(p, s);
+}
+
+Key Position::epKey() const {
+    bool capturable = epSquare_ != kNoSquare &&
+                      (attacks::pawn(~sideToMove_, epSquare_) & pieces(sideToMove_, kPawn));
+    return capturable ? zobrist::enPassant(fileOf(epSquare_)) : 0;
+}
 
 std::optional<Position> Position::fromFen(std::string_view fen) {
     std::array<std::string_view, 6> fields;
@@ -103,33 +124,18 @@ std::optional<Position> Position::fromFen(std::string_view fen) {
 
     if (n > 2 && fields[2] != "-") {
         for (char c : fields[2]) {
-            switch (c) {
-            case 'K':
-                pos.castling_ |= kWhiteKingSide;
-                break;
-            case 'Q':
-                pos.castling_ |= kWhiteQueenSide;
-                break;
-            case 'k':
-                pos.castling_ |= kBlackKingSide;
-                break;
-            case 'q':
-                pos.castling_ |= kBlackQueenSide;
-                break;
-            default:
-                return std::nullopt;
-            }
+            auto i = kCastlingChars.find(c);
+            if (i == std::string_view::npos) return std::nullopt;
+            pos.castling_ |= 1 << i;
         }
         // A right whose king or rook has left home is dropped rather than rejected.
-        auto check = [&](CastlingRights right, Color c, Square king, Square rook) {
-            if (pos.pieceOn(king) != makePiece(c, kKing) ||
-                pos.pieceOn(rook) != makePiece(c, kRook))
-                pos.castling_ &= ~right;
-        };
-        check(kWhiteKingSide, kWhite, kE1, kH1);
-        check(kWhiteQueenSide, kWhite, kE1, kA1);
-        check(kBlackKingSide, kBlack, kE8, kH8);
-        check(kBlackQueenSide, kBlack, kE8, kA8);
+        for (Color c : {kWhite, kBlack}) {
+            for (const CastlingRule& rule : kCastlingRules[c]) {
+                if (pos.pieceOn(rule.kingFrom) != makePiece(c, kKing) ||
+                    pos.pieceOn(rule.rookFrom) != makePiece(c, kRook))
+                    pos.castling_ &= ~rule.right;
+            }
+        }
     }
 
     if (n > 3 && fields[3] != "-") {
@@ -174,10 +180,8 @@ std::string Position::fen() const {
     }
 
     out += sideToMove_ == kWhite ? " w " : " b ";
-    if (castling_ & kWhiteKingSide) out += 'K';
-    if (castling_ & kWhiteQueenSide) out += 'Q';
-    if (castling_ & kBlackKingSide) out += 'k';
-    if (castling_ & kBlackQueenSide) out += 'q';
+    for (std::size_t i = 0; i < kCastlingChars.size(); ++i)
+        if (castling_ & (1 << i)) out += kCastlingChars[i];
     if (!castling_) out += '-';
     out += ' ';
     out += epSquare_ == kNoSquare ? "-" : squareName(epSquare_);
@@ -185,12 +189,12 @@ std::string Position::fen() const {
     return out;
 }
 
-Bitboard Position::attackersTo(Square s, Bitboard occupied) const {
-    return (attacks::pawn(kBlack, s) & pieces(kWhitePawn)) |
-           (attacks::pawn(kWhite, s) & pieces(kBlackPawn)) |
-           (attacks::knight(s) & pieces(kKnight)) | (attacks::king(s) & pieces(kKing)) |
-           (attacks::rook(s, occupied) & (pieces(kRook) | pieces(kQueen))) |
-           (attacks::bishop(s, occupied) & (pieces(kBishop) | pieces(kQueen)));
+bool Position::isAttacked(Square s, Color by) const {
+    Bitboard queens = pieces(by, kQueen);
+    return (attacks::pawn(~by, s) & pieces(by, kPawn)) |
+           (attacks::knight(s) & pieces(by, kKnight)) | (attacks::king(s) & pieces(by, kKing)) |
+           (attacks::rook(s, occupied()) & (pieces(by, kRook) | queens)) |
+           (attacks::bishop(s, occupied()) & (pieces(by, kBishop) | queens));
 }
 
 bool Position::make(Move m) {
@@ -211,9 +215,9 @@ bool Position::make(Move m) {
     removePiece(from);
     putPiece(m.isPromotion() ? makePiece(us, m.promotionType()) : moved, to);
     if (m.flag() == kCastling) {
-        auto [rookFrom, rookTo] = castlingRook(to);
-        removePiece(rookFrom);
-        putPiece(makePiece(us, kRook), rookTo);
+        const CastlingRule& rule = castlingRule(us, to);
+        removePiece(rule.rookFrom);
+        putPiece(makePiece(us, kRook), rule.rookTo);
     } else if (m.flag() == kEnPassant) {
         removePiece(epVictim(m));
     }
@@ -239,9 +243,9 @@ void Position::unmake(Move m) {
     const Undo& undo = history_.back();
 
     if (m.flag() == kCastling) {
-        auto [rookFrom, rookTo] = castlingRook(to);
-        removePiece(rookTo);
-        putPiece(makePiece(us, kRook), rookFrom);
+        const CastlingRule& rule = castlingRule(us, to);
+        removePiece(rule.rookTo);
+        putPiece(makePiece(us, kRook), rule.rookFrom);
     }
     Piece moved = m.isPromotion() ? makePiece(us, kPawn) : board_[to];
     removePiece(to);

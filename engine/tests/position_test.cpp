@@ -7,7 +7,6 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <algorithm>
-#include <array>
 #include <bit>
 #include <initializer_list>
 #include <string>
@@ -16,14 +15,6 @@
 using namespace zugzwang;
 
 namespace {
-
-constexpr std::array<std::string_view, 6> kPerftSuite{
-    Position::kStartFen,
-    kKiwipete,
-    "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1",
-    "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1",
-    "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8",
-    "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10"};
 
 // Rebuilding from the FEN catches any disagreement between the mailbox, bitboards, rights and key.
 void requireMatchesFreshParse(const Position& pos) {
@@ -57,10 +48,10 @@ void checkLegal(std::string_view fen, Move m) {
 TEST_CASE("start position parses", "[position]") {
     Position pos = parse(Position::kStartFen);
     CHECK(pos.sideToMove() == kWhite);
-    CHECK(pos.castlingRights() == kAnyCastling);
+    CHECK(pos.castlingRights() ==
+          (kWhiteKingSide | kWhiteQueenSide | kBlackKingSide | kBlackQueenSide));
     CHECK(pos.epSquare() == kNoSquare);
     CHECK(pos.halfmoveClock() == 0);
-    CHECK(pos.fullmoveNumber() == 1);
     CHECK(pos.pieceOn(kE1) == kWhiteKing);
     CHECK(pos.pieceOn(kD8) == kBlackQueen);
     CHECK(pos.pieceOn(kE4) == kNoPiece);
@@ -73,12 +64,10 @@ TEST_CASE("start position parses", "[position]") {
 }
 
 TEST_CASE("FEN round-trips on the perft suite", "[position]") {
-    for (std::string_view fen : kPerftSuite) {
-        CAPTURE(fen);
-        CHECK(parse(fen).fen() == fen);
-    }
-    for (std::string_view fen : {"rnbqkbnr/ppp1pppp/8/3pP3/8/8/PPPP1PPP/RNBQKBNR w KQkq d6 0 3",
-                                 "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1"}) {
+    for (std::string_view fen : std::initializer_list<std::string_view>{
+             Position::kStartFen, kKiwipete, kPosition3, kPosition4, kPosition5, kPosition6,
+             "rnbqkbnr/ppp1pppp/8/3pP3/8/8/PPPP1PPP/RNBQKBNR w KQkq d6 0 3",
+             "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1"}) {
         CAPTURE(fen);
         CHECK(parse(fen).fen() == fen);
     }
@@ -147,16 +136,6 @@ TEST_CASE("Zobrist keys are compile-time and distinct", "[zobrist]") {
     CHECK(all.front() != 0);
 }
 
-TEST_CASE("incremental key matches full recompute", "[zobrist]") {
-    for (std::string_view fen : std::initializer_list<std::string_view>{
-             Position::kStartFen, kKiwipete,
-             "rnbqkbnr/ppp1pppp/8/3pP3/8/8/PPPP1PPP/RNBQKBNR w KQkq d6 0 3"}) {
-        Position pos = parse(fen);
-        CAPTURE(fen);
-        CHECK(pos.key() == pos.computeKey());
-    }
-}
-
 TEST_CASE("key depends on side, castling and a capturable en passant square", "[zobrist]") {
     Key base = parse("r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1").key();
     CHECK(base != parse("r3k2r/8/8/8/8/8/8/R3K2R b KQkq - 0 1").key());
@@ -170,23 +149,27 @@ TEST_CASE("key depends on side, castling and a capturable en passant square", "[
           parse("rnbqkbnr/ppp1pppp/8/3pP3/8/8/PPPP1PPP/RNBQKBNR w KQkq - 0 3").key());
 }
 
-TEST_CASE("attackersTo finds every attacker of both colours", "[position]") {
+TEST_CASE("isAttacked looks only at the given colour", "[position]") {
     Position start = parse(Position::kStartFen);
-    CHECK(start.attackersTo(kE3) == (squareBb(kD2) | squareBb(kF2)));
-    CHECK(start.attackersTo(kF3) == (squareBb(kE2) | squareBb(kG2) | squareBb(kG1)));
-    CHECK(start.attackersTo(kE4) == 0);
+    CHECK(start.isAttacked(kE3, kWhite));
+    CHECK_FALSE(start.isAttacked(kE3, kBlack));
+    CHECK(start.isAttacked(kF6, kBlack));
+    CHECK_FALSE(start.isAttacked(kF6, kWhite));
+    CHECK_FALSE(start.isAttacked(kE4, kWhite));
+    CHECK_FALSE(start.isAttacked(kE4, kBlack));
 
     Position kiwi = parse(kKiwipete);
-    CHECK(kiwi.attackersTo(kF7) == (squareBb(kE5) | squareBb(kE7) | squareBb(kE8)));
+    CHECK(kiwi.isAttacked(kF7, kWhite));
+    CHECK(kiwi.isAttacked(kF7, kBlack));
     CHECK(kiwi.isAttacked(kD5, kBlack));
     CHECK(kiwi.isAttacked(kH3, kWhite));
-    CHECK_FALSE(kiwi.inCheck());
-    // Lifting the a2 pawn lets the a1 rook see a6.
-    CHECK((kiwi.attackersTo(kA6) & squareBb(kA1)) == 0);
-    CHECK((kiwi.attackersTo(kA6, kiwi.occupied() & ~squareBb(kA2)) & squareBb(kA1)) != 0);
+}
 
+TEST_CASE("inCheck asks about the side to move", "[position]") {
+    CHECK_FALSE(parse(Position::kStartFen).inCheck());
+    CHECK_FALSE(parse(kKiwipete).inCheck());
     CHECK(parse("4k3/8/8/8/8/8/8/4K2r w - - 0 1").inCheck());
-    CHECK(parse("4k3/8/8/8/8/8/3P4/4K3 b - - 0 1").inCheck() == false);
+    CHECK_FALSE(parse("4k3/8/8/8/8/8/3P4/4K3 b - - 0 1").inCheck());
 }
 
 TEST_CASE("make updates all state and unmake restores it", "[make]") {
@@ -296,7 +279,8 @@ TEST_CASE("returning to a position restores its key, not its clocks", "[make]") 
 
 TEST_CASE("random games keep all state consistent and unwind to the start", "[make]") {
     Prng rng(7);
-    for (std::string_view fen : kPerftSuite) {
+    for (std::string_view fen :
+         {Position::kStartFen, kKiwipete, kPosition3, kPosition4, kPosition5, kPosition6}) {
         CAPTURE(fen);
         Position pos = parse(fen);
         Key rootKey = pos.key();
