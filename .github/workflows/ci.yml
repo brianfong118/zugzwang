@@ -24,4 +24,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      # Versions lay out the same code differently, so CI must match the local formatter.
+      - run: pipx install clang-format==21.1.8
       - run: find engine -name '*.cpp' -o -name '*.h' | xargs -r clang-format --dry-run --Werror

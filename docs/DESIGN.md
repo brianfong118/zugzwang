@@ -10,6 +10,7 @@ Decisions and their reasons. When a decision changes, mark the old one supersede
 - MinGW builds link `-static`. The engine binary is copied next to lichess-bot and must not depend on whichever MSYS2 runtime DLLs are on PATH; a toolchain newer than the installed `libstdc++-6.dll` otherwise fails at load with `STATUS_ENTRYPOINT_NOT_FOUND`.
 - Catch2 via FetchContent. Perft is the primary correctness check; unit tests cover FEN round-trips, UCI parsing and eval symmetry (mirrored position, negated score).
 - CI builds Release and Debug on every push and runs the tests under sanitizers, excluding `[slow]` perft cases.
+- CI pins `clang-format` to 21.1.8. Versions lay out the same code differently, so an unpinned runner fails code that is correctly formatted locally. Update the pin when the local version changes.
 
 ## Board
 - Bitboards: one per piece type per colour, two colour occupancies, plus a 64-entry mailbox so piece-at-square is a lookup, not a 12-bitboard scan.
