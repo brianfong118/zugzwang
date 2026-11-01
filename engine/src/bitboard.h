@@ -27,9 +27,6 @@ constexpr Bitboard squareBb(Square s) {
 constexpr Square lsb(Bitboard b) {
     return Square(std::countr_zero(b));
 }
-constexpr bool moreThanOne(Bitboard b) {
-    return (b & (b - 1)) != 0;
-}
 
 inline Square popLsb(Bitboard& b) {
     Square s = lsb(b);

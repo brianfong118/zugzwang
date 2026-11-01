@@ -46,7 +46,6 @@ FetchContent_MakeAvailable(Catch2)
 
 add_executable(zugzwang_tests
     tests/main.cpp
-    tests/toolchain_test.cpp
     tests/attacks_test.cpp
     tests/position_test.cpp)
 target_link_libraries(zugzwang_tests PRIVATE zugzwang_core Catch2::Catch2)

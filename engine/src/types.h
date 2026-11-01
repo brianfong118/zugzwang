@@ -9,7 +9,7 @@ using Key = std::uint64_t;
 
 enum Color : std::uint8_t { kWhite, kBlack };
 
-enum PieceType : std::uint8_t { kPawn, kKnight, kBishop, kRook, kQueen, kKing, kNoPieceType };
+enum PieceType : std::uint8_t { kPawn, kKnight, kBishop, kRook, kQueen, kKing };
 
 // Piece = 6 * color + type, so the twelve pieces index Zobrist and bitboard tables directly.
 enum Piece : std::uint8_t {
