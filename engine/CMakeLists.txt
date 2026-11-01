@@ -30,7 +30,9 @@ target_compile_definitions(zugzwang_options INTERFACE
 add_library(zugzwang_core STATIC
     src/attacks.cpp
     src/movegen.cpp
-    src/position.cpp)
+    src/perft.cpp
+    src/position.cpp
+    src/uci.cpp)
 target_include_directories(zugzwang_core PUBLIC src)
 target_link_libraries(zugzwang_core PUBLIC zugzwang_options)
 
@@ -49,5 +51,7 @@ add_executable(zugzwang_tests
     tests/main.cpp
     tests/attacks_test.cpp
     tests/movegen_test.cpp
-    tests/position_test.cpp)
+    tests/perft_test.cpp
+    tests/position_test.cpp
+    tests/uci_test.cpp)
 target_link_libraries(zugzwang_tests PRIVATE zugzwang_core Catch2::Catch2)

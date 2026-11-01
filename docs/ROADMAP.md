@@ -7,9 +7,9 @@ Tick items as they land. Versions are git tags created by the user.
 - [x] Bitboard board state, FEN parse/print
 - [x] Attack tables, magics for sliders
 - [x] Zobrist keys
-- [ ] Move generation, make/unmake
-- [ ] `perft <depth>` with divide output
-- [ ] Perft suite passes: start position d6, Kiwipete d5, CPW positions 3–6
+- [x] Move generation, make/unmake
+- [x] `perft <depth>` with divide output
+- [x] Perft suite passes: start position d6, Kiwipete d5, CPW positions 3–6
 - [ ] CI green
 
 ## v0.2 — UCI

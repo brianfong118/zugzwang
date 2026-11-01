@@ -43,6 +43,9 @@ Decisions and their reasons. When a decision changes, mark the old one supersede
 
 ## UCI and Lichess
 - `uci`, `isready`, `ucinewgame`, `position`, `go` (`wtime btime winc binc movetime depth nodes infinite`), `stop`, `quit`. Extensions: `bench`, `perft <depth>` (divide output).
+- The command loop takes streams rather than `std::cin` and `std::cout`, so tests drive it in-process. It starts in v0.1 with `position`, `perft` and `quit`, because debugging perft needs `position` to reach the failing line.
+- `position` builds a separate `Position` and swaps it in only if the FEN and every move are valid, so a bad command leaves the current position untouched. Move text is matched against `generateMoves` output, since `make` trusts its input.
+- `perft` makes every move, including the last ply. Bulk counting the final ply needs a legal move list, and generation here is pseudo-legal.
 - The official lichess-bot Python bridge connects the binary to Lichess. A hand-written bridge signals nothing; the official one already handles the Bot API, challenges and clocks.
 
 ## Measuring strength

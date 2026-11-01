@@ -16,6 +16,8 @@ jobs:
         if: matrix.build_type == 'Debug'
       - run: ./build/zugzwang_tests
         if: matrix.build_type == 'Release'
+      # The tests have their own main, so only this covers the shipped binary's startup.
+      - run: echo "perft 3" | ./build/zugzwang | grep -x "Nodes searched: 8902"
 
   format:
     runs-on: ubuntu-latest
