@@ -3,12 +3,45 @@
 #include <bit>
 #include <cctype>
 #include <charconv>
+#include <cstdlib>
 
 namespace zugzwang {
 
 namespace {
 
 constexpr std::string_view kPieceChars = "PNBRQKpnbrqk";
+
+// A move from or onto one of these squares ends the rights that need a piece to stay there.
+constexpr std::array<std::uint8_t, 64> kRightsLost = [] {
+    std::array<std::uint8_t, 64> lost{};
+    lost[kE1] = kWhiteKingSide | kWhiteQueenSide;
+    lost[kH1] = kWhiteKingSide;
+    lost[kA1] = kWhiteQueenSide;
+    lost[kE8] = kBlackKingSide | kBlackQueenSide;
+    lost[kH8] = kBlackKingSide;
+    lost[kA8] = kBlackQueenSide;
+    return lost;
+}();
+
+struct RookMove {
+    Square from, to;
+};
+
+constexpr RookMove castlingRook(Square kingTo) {
+    int rank = rankOf(kingTo);
+    return fileOf(kingTo) == 6 ? RookMove{makeSquare(7, rank), makeSquare(5, rank)}
+                               : RookMove{makeSquare(0, rank), makeSquare(3, rank)};
+}
+
+// The square between the ends of a double push or a castling king move.
+constexpr Square midpoint(Square a, Square b) {
+    return Square((a + b) / 2);
+}
+
+// An en passant victim stands on the capture's target file and the capturer's starting rank.
+constexpr Square epVictim(Move m) {
+    return makeSquare(fileOf(m.to()), rankOf(m.from()));
+}
 
 Piece pieceFromChar(char c) {
     auto i = kPieceChars.find(c);
@@ -65,6 +98,9 @@ std::optional<Position> Position::fromFen(std::string_view fen) {
     else
         return std::nullopt;
 
+    // Pseudo-legal generation would otherwise offer a king capture, and search assumes two kings.
+    if (pos.isAttacked(pos.kingSquare(~pos.sideToMove_), pos.sideToMove_)) return std::nullopt;
+
     if (n > 2 && fields[2] != "-") {
         for (char c : fields[2]) {
             switch (c) {
@@ -114,9 +150,7 @@ std::optional<Position> Position::fromFen(std::string_view fen) {
         return std::nullopt;
 
     // putPiece has already folded in the piece keys.
-    pos.key_ ^= zobrist::castling(pos.castling_);
-    if (pos.epSquare_ != kNoSquare && pos.epCapturable())
-        pos.key_ ^= zobrist::enPassant(fileOf(pos.epSquare_));
+    pos.key_ ^= zobrist::castling(pos.castling_) ^ pos.epKey();
     if (pos.sideToMove_ == kBlack) pos.key_ ^= zobrist::side();
     return pos;
 }
@@ -159,14 +193,81 @@ Bitboard Position::attackersTo(Square s, Bitboard occupied) const {
            (attacks::bishop(s, occupied) & (pieces(kBishop) | pieces(kQueen)));
 }
 
+bool Position::make(Move m) {
+    Square from = m.from(), to = m.to();
+    Color us = sideToMove_, them = ~us;
+
+    // The king's landing square is covered by the check at the end, like any other king move.
+    if (m.flag() == kCastling && (isAttacked(from, them) || isAttacked(midpoint(from, to), them)))
+        return false;
+
+    Piece moved = board_[from], captured = board_[to];
+    history_.push_back({key_, halfmoveClock_, epSquare_, castling_, captured});
+
+    // epKey depends on the side to move and the pawns, so it is removed before either changes.
+    key_ ^= epKey() ^ zobrist::castling(castling_) ^ zobrist::side();
+
+    if (captured != kNoPiece) removePiece(to);
+    removePiece(from);
+    putPiece(m.isPromotion() ? makePiece(us, m.promotionType()) : moved, to);
+    if (m.flag() == kCastling) {
+        auto [rookFrom, rookTo] = castlingRook(to);
+        removePiece(rookFrom);
+        putPiece(makePiece(us, kRook), rookTo);
+    } else if (m.flag() == kEnPassant) {
+        removePiece(epVictim(m));
+    }
+
+    bool pawnMove = typeOf(moved) == kPawn;
+    halfmoveClock_ = pawnMove || captured != kNoPiece ? 0 : halfmoveClock_ + 1;
+    if (us == kBlack) ++fullmoveNumber_;
+    castling_ &= ~(kRightsLost[from] | kRightsLost[to]);
+    epSquare_ = pawnMove && std::abs(to - from) == 16 ? midpoint(from, to) : kNoSquare;
+    sideToMove_ = them;
+    key_ ^= epKey() ^ zobrist::castling(castling_);
+
+    if (isAttacked(kingSquare(us), them)) {
+        unmake(m);
+        return false;
+    }
+    return true;
+}
+
+void Position::unmake(Move m) {
+    Square from = m.from(), to = m.to();
+    Color us = ~sideToMove_;
+    const Undo& undo = history_.back();
+
+    if (m.flag() == kCastling) {
+        auto [rookFrom, rookTo] = castlingRook(to);
+        removePiece(rookTo);
+        putPiece(makePiece(us, kRook), rookFrom);
+    }
+    Piece moved = m.isPromotion() ? makePiece(us, kPawn) : board_[to];
+    removePiece(to);
+    putPiece(moved, from);
+    if (undo.captured != kNoPiece)
+        putPiece(undo.captured, to);
+    else if (m.flag() == kEnPassant)
+        putPiece(makePiece(~us, kPawn), epVictim(m));
+
+    if (us == kBlack) --fullmoveNumber_;
+    sideToMove_ = us;
+    halfmoveClock_ = undo.halfmoveClock;
+    epSquare_ = undo.epSquare;
+    castling_ = undo.castling;
+    // Restored last because putPiece and removePiece above also changed it.
+    key_ = undo.key;
+    history_.pop_back();
+}
+
 Key Position::computeKey() const {
     Key k = 0;
     for (Bitboard b = occupied(); b;) {
         Square s = popLsb(b);
         k ^= zobrist::piece(pieceOn(s), s);
     }
-    k ^= zobrist::castling(castling_);
-    if (epSquare_ != kNoSquare && epCapturable()) k ^= zobrist::enPassant(fileOf(epSquare_));
+    k ^= zobrist::castling(castling_) ^ epKey();
     if (sideToMove_ == kBlack) k ^= zobrist::side();
     return k;
 }

@@ -2,6 +2,7 @@
 
 #include "attacks.h"
 #include "bitboard.h"
+#include "move.h"
 #include "types.h"
 #include "zobrist.h"
 
@@ -9,6 +10,7 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <vector>
 
 namespace zugzwang {
 
@@ -17,7 +19,10 @@ class Position {
     static constexpr std::string_view kStartFen =
         "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
-    Position() { board_.fill(kNoPiece); }
+    Position() {
+        board_.fill(kNoPiece);
+        history_.reserve(kHistoryReserve);
+    }
 
     // Empty on a FEN that is malformed or structurally illegal (see DESIGN.md for what is checked).
     static std::optional<Position> fromFen(std::string_view fen);
@@ -44,10 +49,26 @@ class Position {
     bool isAttacked(Square s, Color by) const { return attackersTo(s) & pieces(by); }
     bool inCheck() const { return isAttacked(kingSquare(sideToMove_), ~sideToMove_); }
 
+    // m must come from generateMoves. If it is illegal, returns false with the position unchanged.
+    bool make(Move m);
+    void unmake(Move m);
+
     // Full recompute, for checking the incrementally maintained key.
     Key computeKey() const;
 
   private:
+    // What a move destroys and unmake cannot work out from the board afterwards.
+    struct Undo {
+        Key key;
+        int halfmoveClock;
+        Square epSquare;
+        std::uint8_t castling;
+        Piece captured;
+    };
+
+    // Enough that make does not reallocate in any realistic game plus search.
+    static constexpr std::size_t kHistoryReserve = 1024;
+
     void putPiece(Piece p, Square s) {
         byPiece_[p] |= squareBb(s);
         byColor_[colorOf(p)] |= squareBb(s);
@@ -61,10 +82,13 @@ class Position {
         board_[s] = kNoPiece;
         key_ ^= zobrist::piece(p, s);
     }
-    bool epCapturable() const {
-        return attacks::pawn(~sideToMove_, epSquare_) & pieces(sideToMove_, kPawn);
+    Key epKey() const {
+        bool capturable = epSquare_ != kNoSquare &&
+                          (attacks::pawn(~sideToMove_, epSquare_) & pieces(sideToMove_, kPawn));
+        return capturable ? zobrist::enPassant(fileOf(epSquare_)) : 0;
     }
 
+    std::vector<Undo> history_;
     std::array<Bitboard, 12> byPiece_{};
     std::array<Bitboard, 2> byColor_{};
     std::array<Piece, 64> board_;
