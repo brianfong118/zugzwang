@@ -67,7 +67,8 @@ TEST_CASE("FEN round-trips on the perft suite", "[position]") {
     for (std::string_view fen : std::initializer_list<std::string_view>{
              Position::kStartFen, kKiwipete, kPosition3, kPosition4, kPosition5, kPosition6,
              "rnbqkbnr/ppp1pppp/8/3pP3/8/8/PPPP1PPP/RNBQKBNR w KQkq d6 0 3",
-             "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1"}) {
+             "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1",
+             "4k3/8/8/8/8/8/8/4K3 w - - 1000000 1000000"}) {
         CAPTURE(fen);
         CHECK(parse(fen).fen() == fen);
     }
@@ -100,12 +101,17 @@ TEST_CASE("malformed FENs are rejected", "[position]") {
              "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNX w",      // bad piece
              "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQ1BNR w",      // no white king
              "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkx", // bad castling
-             "4k3/8/8/8/8/8/8/4K3 w - e3",                         // ep with no pawn
+             "4k3/8/8/8/8/8/8/4K3 w - e6",                         // ep with no pawn
+             "4k3/8/4n3/4p3/8/8/8/4K3 w - e6",                     // ep square occupied
+             "3nk3/3n4/8/3pP3/8/8/8/4K3 w - d6",                   // ep pawn's origin occupied
              "4k3/8/8/8/4P3/8/8/4K3 w - e3",                       // ep on the wrong side
              "4k3/8/8/8/8/8/8/4K3 w - e9",                         // ep off the board
              "4k3/8/8/8/8/8/8/4K3 w - - x 1",                      // bad halfmove clock
              "4k3/8/8/8/8/8/8/4K3 w - - 0 0",                      // fullmove starts at 1
              "4k3/8/8/8/8/8/8/4K3 w - - -1 1",                     // negative clock
+             "4k3/8/8/8/8/8/8/4K3 w - - 1000001 1",                // halfmove clock too large
+             "4k3/8/8/8/8/8/8/4K3 w - - 0 1000001",                // fullmove number too large
+             "4k3/8/8/8/8/8/8/4K3 w - - 0 1 x",                    // seventh field
              "P3k3/8/8/8/8/8/8/4K3 w",                             // pawn on the back rank
              "4k3/8/8/8/8/PPPPPPPP/PPPPPPPP/4K3 w",                // seventeen white pieces
              "4k3/pppppppp/pppppppp/8/8/8/8/4K3 w",                // seventeen black pieces

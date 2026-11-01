@@ -10,7 +10,7 @@ Tick items as they land. Versions are git tags created by the user.
 - [x] Move generation, make/unmake
 - [x] `perft <depth>` with divide output
 - [x] Perft suite passes: start position d6, Kiwipete d5, CPW positions 3–6
-- [ ] CI green
+- [x] CI green
 
 ## v0.2 — UCI
 - [ ] UCI loop on main thread, search on worker thread, `stop` works mid-search

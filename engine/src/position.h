@@ -54,7 +54,7 @@ class Position {
     bool inCheck() const { return isAttacked(kingSquare(sideToMove_), ~sideToMove_); }
 
     // m must come from generateMoves. If it is illegal, returns false with the position unchanged.
-    bool make(Move m);
+    [[nodiscard]] bool make(Move m);
     void unmake(Move m);
 
     // Full recompute, for checking the incrementally maintained key.

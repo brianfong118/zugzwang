@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.24)
+cmake_minimum_required(VERSION 3.25)
 project(zugzwang VERSION 0.1.0 LANGUAGES CXX)
 
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
@@ -14,10 +14,11 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(kSanitize $<AND:$<CONFIG:Debug>,$<PLATFORM_ID:Linux>>)
 
 add_library(zugzwang_options INTERFACE)
+# UBSan only prints by default, so -fno-sanitize-recover is what makes undefined behaviour fail CI.
 target_compile_options(zugzwang_options INTERFACE
     -Wall -Wextra
     $<$<CONFIG:Release>:-march=native>
-    $<${kSanitize}:-fsanitize=address,undefined;-fno-omit-frame-pointer>)
+    $<${kSanitize}:-fsanitize=address,undefined;-fno-sanitize-recover=all;-fno-omit-frame-pointer>)
 # Static runtimes on Windows, because the binary is copied next to lichess-bot, away from MSYS2.
 target_link_options(zugzwang_options INTERFACE
     $<$<BOOL:${MINGW}>:-static>

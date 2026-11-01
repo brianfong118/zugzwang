@@ -16,6 +16,9 @@ namespace zugzwang {
 
 namespace {
 
+// perft recurses once per ply and no real run comes close, so this only protects the stack.
+constexpr int kMaxPerftDepth = 64;
+
 std::optional<Move> parseMove(const Position& pos, std::string_view text) {
     for (Move m : generateMoves(pos))
         if (toUci(m) == text) return m;
@@ -64,10 +67,10 @@ void uciLoop(std::istream& in, std::ostream& out) {
                 out << "info string invalid position command\n";
         } else if (command == "perft") {
             int depth = 0;
-            if (args >> depth && depth >= 1)
+            if (args >> depth && (args >> std::ws).eof() && depth >= 1 && depth <= kMaxPerftDepth)
                 divide(pos, depth, out);
             else
-                out << "info string perft needs a depth of at least 1\n";
+                out << "info string perft needs one depth from 1 to " << kMaxPerftDepth << '\n';
         }
     }
 }

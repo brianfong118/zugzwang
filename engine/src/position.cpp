@@ -48,9 +48,12 @@ Piece pieceFromChar(char c) {
     return i == std::string_view::npos ? kNoPiece : Piece(i);
 }
 
-bool parseInt(std::string_view s, int& out) {
+// Far beyond any real game, and leaves make room to keep counting without overflow.
+constexpr int kMaxFenCounter = 1'000'000;
+
+bool parseCounter(std::string_view s, int& out) {
     auto [ptr, ec] = std::from_chars(s.data(), s.data() + s.size(), out);
-    return ec == std::errc{} && ptr == s.data() + s.size() && out >= 0;
+    return ec == std::errc{} && ptr == s.data() + s.size() && out >= 0 && out <= kMaxFenCounter;
 }
 
 } // namespace
@@ -79,13 +82,16 @@ Key Position::epKey() const {
 std::optional<Position> Position::fromFen(std::string_view fen) {
     std::array<std::string_view, 6> fields;
     int n = 0;
-    for (std::size_t i = 0; i < fen.size() && n < 6;) {
+    for (std::size_t i = 0; i < fen.size();) {
         while (i < fen.size() && std::isspace(static_cast<unsigned char>(fen[i])))
             ++i;
         std::size_t start = i;
         while (i < fen.size() && !std::isspace(static_cast<unsigned char>(fen[i])))
             ++i;
-        if (i > start) fields[n++] = fen.substr(start, i - start);
+        if (i > start) {
+            if (n == 6) return std::nullopt;
+            fields[n++] = fen.substr(start, i - start);
+        }
     }
     if (n < 2) return std::nullopt;
 
@@ -140,19 +146,22 @@ std::optional<Position> Position::fromFen(std::string_view fen) {
 
     if (n > 3 && fields[3] != "-") {
         std::string_view ep = fields[3];
-        int epRank = pos.sideToMove_ == kWhite ? 5 : 2;
+        bool whiteToMove = pos.sideToMove_ == kWhite;
+        int epRank = whiteToMove ? 5 : 2;
         if (ep.size() != 2 || ep[0] < 'a' || ep[0] > 'h' || ep[1] != '1' + epRank)
             return std::nullopt;
-        Square s = makeSquare(ep[0] - 'a', epRank);
-        Square pawnSquare = s + (pos.sideToMove_ == kWhite ? kSouth : kNorth);
-        if (pos.pieceOn(s) != kNoPiece ||
-            pos.pieceOn(pawnSquare) != makePiece(~pos.sideToMove_, kPawn))
+        int epFile = ep[0] - 'a';
+        // The double push must have been possible: pawn landed, and the squares behind it empty.
+        if (pos.pieceOn(makeSquare(epFile, whiteToMove ? 4 : 3)) !=
+                makePiece(~pos.sideToMove_, kPawn) ||
+            pos.pieceOn(makeSquare(epFile, epRank)) != kNoPiece ||
+            pos.pieceOn(makeSquare(epFile, whiteToMove ? 6 : 1)) != kNoPiece)
             return std::nullopt;
-        pos.epSquare_ = s;
+        pos.epSquare_ = makeSquare(epFile, epRank);
     }
 
-    if (n > 4 && !parseInt(fields[4], pos.halfmoveClock_)) return std::nullopt;
-    if (n > 5 && (!parseInt(fields[5], pos.fullmoveNumber_) || pos.fullmoveNumber_ < 1))
+    if (n > 4 && !parseCounter(fields[4], pos.halfmoveClock_)) return std::nullopt;
+    if (n > 5 && (!parseCounter(fields[5], pos.fullmoveNumber_) || pos.fullmoveNumber_ < 1))
         return std::nullopt;
 
     // putPiece has already folded in the piece keys.

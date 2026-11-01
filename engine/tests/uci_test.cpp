@@ -63,8 +63,10 @@ TEST_CASE("a bad position command reports it and keeps the current position", "[
              "position fen",
              "position fen garbage",
              "position startpos nonsense e2e4",
-             "position startpos moves e2e5",      // not a move
-             "position startpos moves e2e4 e2e4", // valid first move must not stick
+             "position startpos moves e2e5",                      // not a move
+             "position startpos moves e2e4 e2e4",                 // valid first move must not stick
+             "position fen 4k3/8/8/8/8/8/4P3/4K3 w - - 0 1 e2e4", // no moves keyword
+             "position fen 4k3/8/8/8/8/8/4P3/4K3 w - - 0 1 move e2e4",    // misspelt keyword
              "position fen 4r1k1/8/8/8/8/8/4N3/4K3 w - - 0 1 moves e2c3", // pinned
              "position fen 4k2R/8/8/8/8/8/8/4K3 w - - 0 1",               // king capturable
              "position fen krKQQQQQ/PrQ4Q/QQ5Q/Q6Q/Q6Q/Q6Q/Q6Q/QQQQQQQQ w - - 0 1", // too many
@@ -77,7 +79,8 @@ TEST_CASE("a bad position command reports it and keeps the current position", "[
 }
 
 TEST_CASE("perft rejects a missing or invalid depth", "[uci]") {
-    for (std::string bad : {"perft", "perft 0", "perft -1", "perft x"}) {
+    for (std::string bad : {"perft", "perft 0", "perft -1", "perft x", "perft 65", "perft 100000",
+                            "perft 99999999999", "perft 1x", "perft 3.5", "perft 1 2"}) {
         CAPTURE(bad);
         CHECK_THAT(run(bad + "\n"), ContainsSubstring("info string perft needs"));
     }
