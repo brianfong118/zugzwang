@@ -1,4 +1,5 @@
 #include "position.h"
+#include "test_util.h"
 #include "zobrist.h"
 
 #include <catch2/catch_test_macros.hpp>
@@ -9,19 +10,6 @@
 #include <vector>
 
 using namespace zugzwang;
-
-namespace {
-
-constexpr std::string_view kKiwipete =
-    "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1";
-
-Position parse(std::string_view fen) {
-    auto pos = Position::fromFen(fen);
-    REQUIRE(pos.has_value());
-    return *pos;
-}
-
-} // namespace
 
 TEST_CASE("start position parses", "[position]") {
     Position pos = parse(Position::kStartFen);
@@ -88,6 +76,8 @@ TEST_CASE("malformed FENs are rejected", "[position]") {
              "4k3/8/8/8/8/8/8/4K3 w - - 0 0",                      // fullmove starts at 1
              "4k3/8/8/8/8/8/8/4K3 w - - -1 1",                     // negative clock
              "P3k3/8/8/8/8/8/8/4K3 w",                             // pawn on the back rank
+             "4k3/8/8/8/8/PPPPPPPP/PPPPPPPP/4K3 w",                // seventeen white pieces
+             "4k3/pppppppp/pppppppp/8/8/8/8/4K3 w",                // seventeen black pieces
          }) {
         CAPTURE(fen);
         CHECK_FALSE(Position::fromFen(fen).has_value());

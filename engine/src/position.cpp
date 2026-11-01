@@ -54,6 +54,8 @@ std::optional<Position> Position::fromFen(std::string_view fen) {
     if (file != 8 || rank != 0) return std::nullopt;
     if (std::popcount(pos.pieces(kWhiteKing)) != 1 || std::popcount(pos.pieces(kBlackKing)) != 1)
         return std::nullopt;
+    if (std::popcount(pos.pieces(kWhite)) > 16 || std::popcount(pos.pieces(kBlack)) > 16)
+        return std::nullopt;
     if (pos.pieces(kPawn) & (kRank1 | kRank8)) return std::nullopt;
 
     if (fields[1] == "w")
