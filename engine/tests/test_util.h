@@ -4,6 +4,7 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <initializer_list>
 #include <string_view>
 #include <utility>
 
@@ -24,6 +25,11 @@ inline Position parse(std::string_view fen) {
     auto pos = Position::fromFen(fen);
     REQUIRE(pos.has_value());
     return std::move(*pos);
+}
+
+inline void play(Position& pos, std::initializer_list<Move> moves) {
+    for (Move m : moves)
+        REQUIRE(pos.make(m));
 }
 
 } // namespace zugzwang

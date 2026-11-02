@@ -5,7 +5,6 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <chrono>
-#include <initializer_list>
 #include <stop_token>
 #include <string_view>
 #include <vector>
@@ -71,9 +70,8 @@ TEST_CASE("search takes the free queen, not the pawn that is defended", "[search
 
 TEST_CASE("the side a queen down repeats the position a third time", "[search]") {
     Position pos = parse("4k3/8/8/8/8/8/8/Q3K3 w - - 0 1");
-    for (Move m : {Move(kA1, kA2), Move(kE8, kD8), Move(kA2, kA1), Move(kD8, kE8), Move(kA1, kA2),
-                   Move(kE8, kD8), Move(kA2, kA1)})
-        REQUIRE(pos.make(m));
+    play(pos, {Move(kA1, kA2), Move(kE8, kD8), Move(kA2, kA1), Move(kD8, kE8), Move(kA1, kA2),
+               Move(kE8, kD8), Move(kA2, kA1)});
 
     SearchInfo info = search(pos, {.depth = 2});
     CHECK(info.score == 0);

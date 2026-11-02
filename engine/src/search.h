@@ -3,6 +3,7 @@
 #include "move.h"
 #include "position.h"
 
+#include <algorithm>
 #include <array>
 #include <chrono>
 #include <cstdint>
@@ -12,6 +13,8 @@
 #include <stop_token>
 
 namespace zugzwang {
+
+using Clock = std::chrono::steady_clock;
 
 inline constexpr int kMaxPly = 128;
 // Mate in n plies scores kMate - n, so the search prefers the fastest mate and the slowest loss.
@@ -30,6 +33,12 @@ struct SearchInfo {
     std::uint64_t nodes = 0;
     PvLine pv;
 };
+
+// A search can finish within a microsecond, so the divisor is at least 1.
+inline std::uint64_t nodesPerSecond(std::uint64_t nodes, Clock::duration elapsed) {
+    auto us = std::chrono::duration_cast<std::chrono::microseconds>(elapsed).count();
+    return nodes * 1'000'000 / std::max<std::int64_t>(us, 1);
+}
 
 struct SearchLimits {
     int depth = kMaxPly;

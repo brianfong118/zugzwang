@@ -9,8 +9,6 @@ namespace zugzwang {
 
 namespace {
 
-using Clock = std::chrono::steady_clock;
-
 struct Searcher {
     const SearchLimits& limits;
     std::stop_token stop;

@@ -210,8 +210,7 @@ bool Position::isAttacked(Square s, Color by) const {
 bool Position::isDraw(int ply) const {
     if (halfmoveClock_ >= 100) return true;
 
-    // history_[n - i] holds the position i plies ago. Nothing before the last capture or pawn move
-    // can recur, a repeat needs the same side to move, and undoing a move takes four plies.
+    // history_[n - i] is the position i plies ago; DESIGN.md says why only these i are scanned.
     int n = int(history_.size());
     int end = std::min(halfmoveClock_, n);
     int beforeRoot = 0;

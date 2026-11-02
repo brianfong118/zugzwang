@@ -122,7 +122,8 @@ TEST_CASE("go nodes and movetime end the search on their own", "[uci]") {
     CHECK_THAT(byNodes, StartsWith("info depth 1 "));
     CHECK_THAT(byNodes, !ContainsSubstring("info depth 2"));
     CHECK_THAT(byNodes, ContainsSubstring("\nbestmove "));
-    CHECK_THAT(run("go movetime 20\n"), ContainsSubstring("\nbestmove "));
+    // depth 64 keeps end of input from stopping the search, so only movetime can end it quickly.
+    CHECK_THAT(run("go depth 64 movetime 20\n"), ContainsSubstring("\nbestmove "));
 }
 
 TEST_CASE("stop, quit and a new go end a running search with a best move", "[uci]") {

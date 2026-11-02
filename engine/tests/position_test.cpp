@@ -43,11 +43,6 @@ void checkLegal(std::string_view fen, Move m) {
     CHECK(pos.make(m));
 }
 
-void play(Position& pos, std::initializer_list<Move> moves) {
-    for (Move m : moves)
-        REQUIRE(pos.make(m));
-}
-
 } // namespace
 
 TEST_CASE("start position parses", "[position]") {

@@ -28,8 +28,6 @@ namespace zugzwang {
 
 namespace {
 
-using Clock = std::chrono::steady_clock;
-
 // perft recurses once per ply and no real run comes close, so this only protects the stack.
 constexpr int kMaxPerftDepth = 64;
 
@@ -123,10 +121,9 @@ std::string formatInfo(const SearchInfo& info, Clock::duration elapsed) {
         line += " score cp " + std::to_string(info.score);
     }
 
-    auto us = std::chrono::duration_cast<std::chrono::microseconds>(elapsed).count();
+    auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count();
     line += " nodes " + std::to_string(info.nodes) + " nps " +
-            std::to_string(info.nodes * 1'000'000 / std::max<std::int64_t>(us, 1)) + " time " +
-            std::to_string(us / 1000);
+            std::to_string(nodesPerSecond(info.nodes, elapsed)) + " time " + std::to_string(ms);
     if (info.pv.length > 0) line += " pv";
     for (int i = 0; i < info.pv.length; ++i)
         line += ' ' + toUci(info.pv.moves[i]);
