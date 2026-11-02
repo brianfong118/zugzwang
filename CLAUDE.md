@@ -28,7 +28,7 @@ Slash commands: `/perft`, `/bench`, `/sprt [baseline] [elo1]`.
 
 ## Engineering rules
 - Perft must pass before any change to board, move generation or make/unmake is called done.
-- Every search or eval change reports its bench result. From v1.1, every Elo-intended change is measured with `/sprt`; state the result. Non-functional changes must leave the bench node count unchanged.
+- Every search or eval change reports its bench result. From v1.0, every Elo-intended change is measured with `/sprt`; state the result. Non-functional changes must leave the bench node count unchanged.
 - Record design decisions in `docs/DESIGN.md`. Tick milestones in `docs/ROADMAP.md` when they land. Design discussion does not go in code comments.
 
 ## Code style

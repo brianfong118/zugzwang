@@ -20,6 +20,7 @@ Tick items as they land. Versions are git tags created by the user.
 - [x] `position` / `go` with all clock parameters
 
 ## v1.0 — Lichess
+- [x] fastchess installed, opening book in `tools/book.epd`, baseline binary in `baseline/`
 - [ ] Quiescence, MVV-LVA
 - [ ] PeSTO tapered eval, replacing material-only
 - [ ] Time management
@@ -28,7 +29,6 @@ Tick items as they land. Versions are git tags created by the user.
 - [ ] First game played; initial rating logged below
 
 ## v1.x — Search improvements, one SPRT each
-- [ ] fastchess installed, opening book in `tools/book.epd`, baseline binary in `baseline/`
 - [ ] Transposition table
 - [ ] Killer + history ordering
 - [ ] Null-move pruning
@@ -56,3 +56,4 @@ Tick items as they land. Versions are git tags created by the user.
 ## SPRT log
 | Date | Change | Result | Games | W-L-D | Elo |
 |------|--------|--------|-------|-------|-----|
+| 2026-11-02 | Setup check: v0.2 against itself, capped at 200 games | Inconclusive, as expected (LLR 0.09) | 200 | 89-84-27 | +8.7 ± 31.8 |
