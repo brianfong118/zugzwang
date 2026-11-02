@@ -15,7 +15,7 @@ Tick items as they land. Versions are git tags created by the user.
 ## v0.2 — UCI and a first search
 - [x] Repetition and 50-move detection
 - [x] Iterative deepening, negamax alpha-beta, material-only eval
-- [ ] `bench` command; first bench log row
+- [x] `bench` command; first bench log row
 - [ ] UCI loop on main thread, search on worker thread, `stop` works mid-search
 - [ ] `position` / `go` with all clock parameters
 
@@ -51,6 +51,7 @@ Tick items as they land. Versions are git tags created by the user.
 ## Bench log
 | Date | Change | Nodes | NPS |
 |------|--------|-------|-----|
+| 2026-11-02 | First bench: iterative deepening, alpha-beta, material eval; 10 positions at depth 5 | 10503664 | 21.2M |
 
 ## SPRT log
 | Date | Change | Result | Games | W-L-D | Elo |

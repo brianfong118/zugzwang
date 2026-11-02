@@ -20,6 +20,7 @@ jobs:
       - shell: bash
         run: |
           echo "perft 3" | ./build/zugzwang | grep -x "Nodes searched: 8902"
+          ./build/zugzwang bench | tail -n 1 | grep -Ex "nodes [0-9]+ nps [0-9]+"
 
   format:
     runs-on: ubuntu-latest

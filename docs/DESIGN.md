@@ -54,6 +54,7 @@ Decisions and their reasons. When a decision changes, mark the old one supersede
 
 ## UCI and Lichess
 - `uci`, `isready`, `ucinewgame`, `position`, `go` (`wtime btime winc binc movetime depth nodes infinite`), `stop`, `quit`. Extensions: `bench`, `perft <depth>` (divide output).
+- Command-line arguments are joined and run as a single command, after which the engine exits, as Stockfish does. Testing tools such as OpenBench call `engine bench` this way, and `zugzwang perft 5` works too.
 - The command loop takes streams rather than `std::cin` and `std::cout`, so tests drive it in-process. It starts in v0.1 with `position`, `perft` and `quit`, because debugging perft needs `position` to reach the failing line.
 - `position` builds a separate `Position` and swaps it in only if the FEN and every move are valid, so a bad command leaves the current position untouched. Move text is matched against `generateMoves` output, since `make` trusts its input.
 - `perft` makes every move, including the last ply. Bulk counting the final ply needs a legal move list, and generation here is pseudo-legal. Its depth is capped at 64, because it recurses once per ply and an unbounded depth overflows the stack.
@@ -61,6 +62,8 @@ Decisions and their reasons. When a decision changes, mark the old one supersede
 
 ## Measuring strength
 - `bench`: fixed positions at fixed depth, prints total nodes and nps. The node count is a fingerprint — it changes iff search or eval behaviour changed.
+- The bench set is ten positions: the start position and the five other perft suite positions for tactics, castling and promotions, two common openings, a Lucena rook endgame and Fine #70, a pawn endgame. The endgames add few nodes today, but they will exercise the TT and endgame eval once those exist. Depth 5 takes about half a second in Release, so it can run on every change. The depth goes up as the search gets cheaper per ply, and each raise is a logged bench change.
+- CI runs `bench` in both builds and checks the output format. Release and Debug give the same node count, so the search does not depend on optimisation level, and the Debug run puts the whole search under the sanitizers.
 - SPRT with fastchess at 8+0.08 against the previous accepted build. Lichess rating is the public scoreboard, not the development signal.
 
 ## Repository policy

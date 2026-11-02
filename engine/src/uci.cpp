@@ -1,5 +1,6 @@
 #include "uci.h"
 
+#include "bench.h"
 #include "movegen.h"
 #include "perft.h"
 #include "position.h"
@@ -71,6 +72,8 @@ void uciLoop(std::istream& in, std::ostream& out) {
                 divide(pos, depth, out);
             else
                 out << "info string perft needs one depth from 1 to " << kMaxPerftDepth << '\n';
+        } else if (command == "bench") {
+            bench(out);
         }
     }
 }

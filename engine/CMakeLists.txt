@@ -26,6 +26,7 @@ target_link_options(zugzwang_options INTERFACE
 
 add_library(zugzwang_core STATIC
     src/attacks.cpp
+    src/bench.cpp
     src/eval.cpp
     src/movegen.cpp
     src/perft.cpp
@@ -50,6 +51,7 @@ FetchContent_MakeAvailable(Catch2)
 add_executable(zugzwang_tests
     tests/main.cpp
     tests/attacks_test.cpp
+    tests/bench_test.cpp
     tests/eval_test.cpp
     tests/movegen_test.cpp
     tests/perft_test.cpp
