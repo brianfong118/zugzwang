@@ -4,7 +4,7 @@
 
 A UCI chess engine in C++20, being built one measured milestone at a time. The goal is a bot on Lichess with hand-crafted evaluation, then a self-trained NNUE.
 
-**Status: v0.1.** The board, move generation and make/unmake are complete and verified. It does not play chess yet: UCI comes in v0.2, and search and evaluation in v1.0. See the [roadmap](docs/ROADMAP.md).
+**Status: v0.1.** The board, move generation and make/unmake are complete and verified. It does not play chess yet: UCI and a first search come in v0.2, and the search and evaluation it takes to Lichess in v1.0. See the [roadmap](docs/ROADMAP.md).
 
 ## Verified move generation
 

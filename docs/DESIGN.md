@@ -32,13 +32,20 @@ Decisions and their reasons. When a decision changes, mark the old one supersede
 - Zobrist keys are a `constexpr` table generated from the fixed-seed PRNG; the sixteen castling keys are indexed by the rights mask so an update is `key ^= castling[old] ^ castling[new]`. Piece placement updates the key incrementally from the first `putPiece`; `computeKey()` recomputes from scratch and exists only to check the incremental key in tests. `unmake` restores the key from the undo entry rather than reversing the XORs. `putPiece` and `removePiece` still hash during `unmake`, and the result is overwritten. Avoiding that gains 2-4% in perft but needs a second pair of helpers, which is not worth it before search exists to profile.
 
 ## Search
-- v1: iterative deepening, negamax alpha-beta, quiescence (captures only, stand-pat), MVV-LVA ordering. Quiescence is in v1 because material-only eval without it hangs pieces at the horizon and the bot would look broken rather than weak.
+- v0.2: iterative deepening and negamax alpha-beta on a material-only eval. This supersedes the original plan to start search in v1. v0.2 already needed `go`, `stop` and `bench`, so it needed a search, and a placeholder that played random moves would have been thrown away.
+- v1: quiescence (captures only, stand-pat), MVV-LVA ordering. Quiescence is in v1 because material-only eval without it hangs pieces at the horizon and the bot would look broken rather than weak.
 - v1.x: transposition table, killer and history ordering, null-move pruning, late move reductions, check extensions, aspiration windows. One change per SPRT.
 - Search runs on a worker thread; the UCI thread only parses input and sets an atomic stop flag. Required for `stop` to work mid-search.
 - `Position::isDraw(ply)` covers the fifty-move rule and repetition, where `ply` is the distance from the search root. If the earlier occurrence is after the root, a second occurrence is already a draw: whichever side steered into the cycle can repeat it again. If the earlier occurrence is the root or before it, the game rule applies and a third occurrence is needed. Ethereal draws the line in the same place, and Stockfish's `StateInfo::repetition` encodes the same split. The scan covers only plies within the halfmove clock, since a capture or pawn move cannot be undone.
 - The fifty-move rule ignores the exception for checkmate on the hundredth ply, as Ethereal does. Honouring it needs a legal-move search at every such node, and the case almost never arises.
+- Negamax: every score is from the side to move, so one function serves both colours and a child's score is negated on return.
+- Fail-soft alpha-beta: a node returns its best score even when that falls outside the window. It costs nothing over fail-hard, and the tighter bounds pay off once the TT and aspiration windows store and reuse them.
+- Mate is scored `kMate - ply` for the side delivering it, so the search prefers the fastest mate and, when losing, the slowest. `kMaxPly` (128) bounds the depth, the PV and mate distances.
+- The PV is collected bottom-up. Each node passes its children a line, and on a new best move copies the child's line behind that move. No global table is needed, and the line is always the one that produced the score.
+- Iterative deepening runs from depth 1 even before anything can interrupt a search. `stop` and time limits will take the move from the last completed iteration, and each shallower iteration costs a small fraction of the next one.
 
 ## Evaluation
+- v0.2: material only, with the Chess Programming Wiki's Simplified Evaluation Function values (100, 320, 330, 500, 900), scored for the side to move. It exists so the search has something to maximise; PeSTO replaces it in v1.
 - v1: tapered material + PeSTO piece-square tables. Public, known-good values; removes tuning from the critical path to Lichess.
 - v2: NNUE. HalfKA-style features, one hidden layer, int16 accumulators updated incrementally in make/unmake, SIMD inference. Training data from self-play of the best v1.x build so the net is trained on this engine's own data, not Stockfish's. Trainer in `trainer/` (Python, PyTorch). Nets attached to GitHub Releases, not committed.
 

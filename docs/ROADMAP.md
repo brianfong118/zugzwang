@@ -12,15 +12,16 @@ Tick items as they land. Versions are git tags created by the user.
 - [x] Perft suite passes: start position d6, Kiwipete d5, CPW positions 3–6
 - [x] CI green
 
-## v0.2 — UCI
+## v0.2 — UCI and a first search
+- [x] Repetition and 50-move detection
+- [x] Iterative deepening, negamax alpha-beta, material-only eval
+- [ ] `bench` command; first bench log row
 - [ ] UCI loop on main thread, search on worker thread, `stop` works mid-search
 - [ ] `position` / `go` with all clock parameters
-- [x] Repetition and 50-move detection
-- [ ] `bench` command; first bench log row
 
 ## v1.0 — Lichess
-- [ ] Iterative deepening, negamax alpha-beta, quiescence, MVV-LVA
-- [ ] Material + PeSTO tapered eval
+- [ ] Quiescence, MVV-LVA
+- [ ] PeSTO tapered eval, replacing material-only
 - [ ] Time management
 - [ ] Fresh Lichess account, upgraded to BOT via API
 - [ ] lichess-bot cloned into `lichess-bot/`, `config.yml` set (token, engine dir); confirm `git status` shows nothing from `lichess-bot/` before first run
