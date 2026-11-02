@@ -126,3 +126,12 @@ TEST_CASE("each completed depth is reported once, in order", "[search]") {
     search(stalemate, {}, {}, [&](const SearchInfo& info) { depths.push_back(info.depth); });
     CHECK(depths == std::vector<int>{1});
 }
+
+TEST_CASE("the time budget spreads the clock and caps it when it runs low", "[search]") {
+    using std::chrono::milliseconds;
+    CHECK(timeBudget(milliseconds(180'000), milliseconds(2'000)) == milliseconds(8'000));
+    CHECK(timeBudget(milliseconds(60'000), milliseconds(0)) == milliseconds(2'000));
+    // remaining/30 + increment would be 2333 ms, almost a quarter of what is left.
+    CHECK(timeBudget(milliseconds(10'000), milliseconds(2'000)) == milliseconds(1'000));
+    CHECK(timeBudget(milliseconds(0), milliseconds(0)) == milliseconds(0));
+}

@@ -69,6 +69,11 @@ int Searcher::negamax(Position& pos, int depth, int ply, int alpha, int beta, Pv
 
 } // namespace
 
+std::chrono::milliseconds timeBudget(std::chrono::milliseconds remaining,
+                                     std::chrono::milliseconds increment) {
+    return std::min(remaining / 30 + increment, remaining / 10);
+}
+
 SearchInfo search(Position& pos, const SearchLimits& limits, std::stop_token stop,
                   const SearchReport& report) {
     // A copied Position keeps no spare history, and make must not allocate mid-search.

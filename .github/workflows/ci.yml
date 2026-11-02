@@ -4,6 +4,8 @@ on: [push, pull_request]
 jobs:
   build-test:
     runs-on: ubuntu-latest
+    # A broken time limit hangs a test instead of failing it; the default timeout is six hours.
+    timeout-minutes: 20
     strategy:
       matrix:
         build_type: [Release, Debug]

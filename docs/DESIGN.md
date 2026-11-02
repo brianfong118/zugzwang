@@ -10,6 +10,7 @@ Decisions and their reasons. When a decision changes, mark the old one supersede
 - MinGW builds link `-static`. The engine binary is copied next to lichess-bot and must not depend on whichever MSYS2 runtime DLLs are on PATH; a toolchain newer than the installed `libstdc++-6.dll` otherwise fails at load with `STATUS_ENTRYPOINT_NOT_FOUND`.
 - Catch2 via FetchContent. Perft is the primary correctness check; unit tests cover FEN round-trips, UCI parsing and eval symmetry (mirrored position, negated score).
 - CI builds Release and Debug on every push and runs the tests under sanitizers, excluding `[slow]` perft cases. Debug adds `-fno-sanitize-recover=all`, because UBSan otherwise only prints a message and exits 0, and CI could never fail on undefined behaviour.
+- CI's build job times out after 20 minutes. A broken time or stop limit makes a test hang rather than fail, and GitHub's default timeout is six hours.
 - CI pins `clang-format` to 21.1.8. Versions lay out the same code differently, so an unpinned runner fails code that is correctly formatted locally. Update the pin when the local version changes.
 
 ## Board
@@ -54,12 +55,14 @@ Decisions and their reasons. When a decision changes, mark the old one supersede
 
 ## Time management
 - v1: budget `remaining/30 + increment` per move, hard cap `remaining/10`. Stop iterating when the next depth is predicted not to fit.
+- v0.2: `timeBudget` returns `min(remaining/30 + increment, remaining/10)`, and the search treats it as a hard limit, since nothing predicts iteration cost yet. remaining/30 assumes about thirty moves are left. The cap matters on a low clock with a large increment, where remaining/30 + increment would spend a quarter or more of what is left. `movestogo` is ignored: for any value up to 30, remaining/30 is at least as cautious as dividing evenly.
+- Only the side to move's clock is read; the other is validated and ignored. Given both a clock and `movetime`, the shorter limit wins, as in Stockfish. There is no move-overhead allowance yet. The cap leaves a margin, and lag handling belongs to the v1 work, measured against Lichess.
 
 ## UCI and Lichess
 - `uci`, `isready`, `ucinewgame`, `position`, `go` (`wtime btime winc binc movetime depth nodes infinite`), `stop`, `quit`. Extensions: `bench`, `perft <depth>` (divide output).
 - Command-line arguments are joined and run as a single command, after which the engine exits, as Stockfish does. Testing tools such as OpenBench call `engine bench` this way, and `zugzwang perft 5` works too.
 - Every output line is flushed. lichess-bot reads through a pipe, which buffers by block, so an unflushed `uciok` would never arrive. Every write also takes one mutex, because the search thread prints `info` and `bestmove` while the UCI thread answers `isready`.
-- `go` values must be positive integers, `depth` is capped at `kMaxPly`, and parameters the engine does not use are ignored. A `go` with no limit is treated as `go infinite`. `go infinite` holds `bestmove` until `stop` even if the search ends first, as UCI requires; the worker waits on a `condition_variable_any` with the stop token. With no legal move the answer is `bestmove 0000`, the UCI null move.
+- `go` values must be positive integers, except clocks and increments, which may be zero (`winc 0` is how lichess-bot reports no increment). `depth` is capped at `kMaxPly`, and parameters the engine does not use are ignored. A `go` with no limit is treated as `go infinite`. `go infinite` holds `bestmove` until `stop` even if the search ends first, as UCI requires; the worker waits on a `condition_variable_any` with the stop token. With no legal move the answer is `bestmove 0000`, the UCI null move.
 - `info` lines carry depth, score, nodes, nps, time and the PV. Mate scores are given in moves, negative when the side to move is being mated, as UCI specifies.
 - `go`, `perft`, `bench` and `quit` stop a running search first. `position` during a search changes only the UCI thread's position, since the search works on its own copy. `ucinewgame` has nothing to reset until the TT exists, so it is ignored like any unknown command.
 - At end of input, a limited search runs to completion and an infinite one is stopped. Stockfish treats end of input as `quit`. Letting a limited search finish keeps `echo "go depth 6" | zugzwang` and the in-process tests deterministic, and an infinite search could never end otherwise.

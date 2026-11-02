@@ -17,7 +17,7 @@ Tick items as they land. Versions are git tags created by the user.
 - [x] Iterative deepening, negamax alpha-beta, material-only eval
 - [x] `bench` command; first bench log row
 - [x] UCI loop on main thread, search on worker thread, `stop` works mid-search
-- [ ] `position` / `go` with all clock parameters
+- [x] `position` / `go` with all clock parameters
 
 ## v1.0 — Lichess
 - [ ] Quiescence, MVV-LVA

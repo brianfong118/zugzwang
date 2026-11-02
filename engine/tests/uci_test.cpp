@@ -4,6 +4,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>
 
+#include <chrono>
 #include <initializer_list>
 #include <sstream>
 #include <string>
@@ -144,9 +145,21 @@ TEST_CASE("go infinite holds its best move until stop, even with nothing to sear
     CHECK(output.find("readyok") < output.find("bestmove"));
 }
 
+TEST_CASE("go reads the clock of the side to move", "[uci]") {
+    // depth 64 keeps end of input from stopping the search, so only the clock can end it quickly.
+    auto start = std::chrono::steady_clock::now();
+    CHECK_THAT(run("go depth 64 wtime 0 btime 3600000 winc 0 binc 0\n"),
+               ContainsSubstring("\nbestmove "));
+    CHECK_THAT(run("position startpos moves e2e4\ngo depth 64 wtime 3600000 btime 0\n"),
+               ContainsSubstring("\nbestmove "));
+    // The opponent's hour would allow two minutes per move.
+    CHECK(std::chrono::steady_clock::now() - start < std::chrono::seconds(10));
+}
+
 TEST_CASE("a bad go command reports it and does not search", "[uci]") {
     for (std::string bad : {"go depth", "go depth 0", "go depth x", "go depth 3x", "go nodes -5",
-                            "go movetime", "go movetime 99999999999999999999"}) {
+                            "go movetime", "go movetime 99999999999999999999", "go wtime -1",
+                            "go btime", "go winc x", "go binc 1.5"}) {
         CAPTURE(bad);
         std::string output = run(bad + "\n");
         CHECK_THAT(output, ContainsSubstring("info string invalid go command"));

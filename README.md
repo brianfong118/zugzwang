@@ -4,7 +4,7 @@
 
 A UCI chess engine in C++20, being built one measured milestone at a time. The goal is a bot on Lichess with hand-crafted evaluation, then a self-trained NNUE.
 
-**Status: v0.1.** The board, move generation and make/unmake are complete and verified. It does not play chess yet: UCI and a first search come in v0.2, and the search and evaluation it takes to Lichess in v1.0. See the [roadmap](docs/ROADMAP.md).
+**Status: v0.2.** It speaks UCI and plays under any time control, with an alpha-beta search on material alone. That makes it legal but weak. v1.0 adds quiescence search, move ordering, a real evaluation and smarter time management, then puts it on Lichess. See the [roadmap](docs/ROADMAP.md).
 
 ## Verified move generation
 
@@ -30,6 +30,9 @@ Speed is about 21 million nodes per second from the start position and 27 millio
 - **Moves:** 16-bit moves in a fixed-size list, so generation never allocates.
 - **Legality:** moves are generated pseudo-legally and checked in `make`, which undoes any illegal move itself.
 - **Hashing:** a Zobrist key updated incrementally on every move.
+- **Search:** iterative-deepening negamax with alpha-beta pruning on its own thread, so `stop` works mid-search. Mates score by distance, and repetitions and the fifty-move rule score as draws.
+- **Time:** about a thirtieth of the remaining clock plus the increment, never more than a tenth of the clock.
+- **Bench:** `bench` searches fixed positions to a fixed depth. Its node count changes exactly when search behaviour does, so every search change records it.
 
 [DESIGN.md](docs/DESIGN.md) records each decision and the reason for it.
 
@@ -46,10 +49,10 @@ cmake --build build
 
 ## Try it
 
-`./build/zugzwang` reads commands from standard input. It speaks UCI (`uci`, `isready`, `position`, `go` with `depth`, `nodes`, `movetime` or `infinite`, `stop`, `quit`) and adds `perft` and `bench`. Arguments run as a single command, so `./build/zugzwang bench` prints the bench result and exits. `perft` prints each first move with its own count, which narrows a wrong total down to one move:
+`./build/zugzwang` reads commands from standard input. It speaks UCI (`uci`, `isready`, `position`, `go` with clocks, `depth`, `nodes`, `movetime` or `infinite`, `stop`, `quit`) and adds `perft` and `bench`. Arguments run as a single command, so `./build/zugzwang bench` prints the bench result and exits. `perft` prints each first move with its own count, which narrows a wrong total down to one move:
 
 ```
-Zugzwang 0.1.0
+Zugzwang 0.2.0
 position fen 4k3/8/8/8/8/8/4P3/4K3 w - - 0 1
 perft 1
 e2e3: 1

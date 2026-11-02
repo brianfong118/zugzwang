@@ -39,6 +39,10 @@ struct SearchLimits {
 
 using SearchReport = std::function<void(const SearchInfo&)>;
 
+// remaining/30 + increment spreads the clock over the game; the remaining/10 cap guards a low one.
+std::chrono::milliseconds timeBudget(std::chrono::milliseconds remaining,
+                                     std::chrono::milliseconds increment);
+
 // Deepens until a limit or a stop request, calling report after each depth; pos ends unchanged.
 SearchInfo search(Position& pos, const SearchLimits& limits, std::stop_token stop = {},
                   const SearchReport& report = {});

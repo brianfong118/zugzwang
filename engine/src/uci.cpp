@@ -7,6 +7,7 @@
 #include "search.h"
 
 #include <algorithm>
+#include <array>
 #include <charconv>
 #include <chrono>
 #include <condition_variable>
@@ -65,35 +66,50 @@ struct GoCommand {
     bool infinite = false;
 };
 
-// Values must be positive integers. Parameters the engine does not support are skipped.
-std::optional<GoCommand> parseGo(std::istringstream& args) {
+// Clocks may be zero and other values must be positive. Unsupported parameters are skipped.
+std::optional<GoCommand> parseGo(std::istringstream& args, Color us) {
+    constexpr std::array<std::string_view, 2> kClock{"wtime", "btime"}, kIncrement{"winc", "binc"};
     GoCommand go;
     bool limited = false;
+    std::optional<std::int64_t> remaining;
+    std::int64_t increment = 0;
     std::string token;
     while (args >> token) {
         if (token == "infinite") {
             go.infinite = true;
             continue;
         }
-        if (token != "depth" && token != "nodes" && token != "movetime") continue;
+        bool clock = token == "wtime" || token == "btime" || token == "winc" || token == "binc";
+        if (!clock && token != "depth" && token != "nodes" && token != "movetime") continue;
 
         std::string text;
         std::int64_t value = 0;
         args >> text;
         auto [ptr, ec] = std::from_chars(text.data(), text.data() + text.size(), value);
-        if (ec != std::errc{} || ptr != text.data() + text.size() || value <= 0)
+        if (ec != std::errc{} || ptr != text.data() + text.size() || value < (clock ? 0 : 1))
             return std::nullopt;
 
-        limited = true;
-        if (token == "depth")
+        if (!clock) limited = true;
+        if (token == kClock[us])
+            remaining = value;
+        else if (token == kIncrement[us])
+            increment = value;
+        else if (token == "depth")
             go.limits.depth = int(std::min<std::int64_t>(value, kMaxPly));
         else if (token == "nodes")
             go.limits.nodes = std::uint64_t(value);
-        else
+        else if (token == "movetime")
             go.limits.time = std::chrono::milliseconds(value);
     }
+
+    if (remaining) {
+        auto budget =
+            timeBudget(std::chrono::milliseconds(*remaining), std::chrono::milliseconds(increment));
+        // Given movetime as well, the shorter limit wins, as in Stockfish.
+        go.limits.time = std::min(go.limits.time.value_or(budget), budget);
+    }
     // Without a limit the search ends only at kMaxPly, so it must wait for stop like go infinite.
-    go.infinite = go.infinite || !limited;
+    go.infinite = go.infinite || (!limited && !remaining);
     return go;
 }
 
@@ -158,7 +174,7 @@ void Uci::stopSearch() {
 }
 
 void Uci::go(std::istringstream& args) {
-    std::optional<GoCommand> parsed = parseGo(args);
+    std::optional<GoCommand> parsed = parseGo(args, pos_.sideToMove());
     if (!parsed) {
         send("info string invalid go command");
         return;
