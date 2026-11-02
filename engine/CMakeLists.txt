@@ -35,10 +35,10 @@ add_library(zugzwang_core STATIC
     src/uci.cpp)
 target_include_directories(zugzwang_core PUBLIC src)
 target_link_libraries(zugzwang_core PUBLIC zugzwang_options)
+target_compile_definitions(zugzwang_core PUBLIC ZUGZWANG_VERSION="${PROJECT_VERSION}")
 
 add_executable(zugzwang src/main.cpp)
 target_link_libraries(zugzwang PRIVATE zugzwang_core)
-target_compile_definitions(zugzwang PRIVATE ZUGZWANG_VERSION="${PROJECT_VERSION}")
 
 include(FetchContent)
 FetchContent_Declare(Catch2

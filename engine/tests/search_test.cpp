@@ -4,8 +4,11 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <chrono>
 #include <initializer_list>
+#include <stop_token>
 #include <string_view>
+#include <vector>
 
 using namespace zugzwang;
 
@@ -13,7 +16,7 @@ namespace {
 
 SearchInfo searchFen(std::string_view fen, int depth) {
     Position pos = parse(fen);
-    SearchInfo info = search(pos, depth);
+    SearchInfo info = search(pos, {.depth = depth});
     CHECK(pos.fen() == fen);
     return info;
 }
@@ -40,7 +43,7 @@ TEST_CASE("search finds a mate in one", "[search]") {
 
 TEST_CASE("search finds a mate in two and its pv delivers it", "[search]") {
     Position pos = parse("k7/8/2K5/8/8/8/8/7R w - - 0 1");
-    SearchInfo info = search(pos, 4);
+    SearchInfo info = search(pos, {.depth = 4});
     CHECK(info.score == kMate - 3);
     REQUIRE(info.pv.length == 3);
     for (int i = 0; i < info.pv.length; ++i)
@@ -72,8 +75,54 @@ TEST_CASE("the side a queen down repeats the position a third time", "[search]")
                    Move(kE8, kD8), Move(kA2, kA1)})
         REQUIRE(pos.make(m));
 
-    SearchInfo info = search(pos, 2);
+    SearchInfo info = search(pos, {.depth = 2});
     CHECK(info.score == 0);
     REQUIRE(info.pv.length > 0);
     CHECK(info.pv.moves[0] == Move(kD8, kE8));
+}
+
+TEST_CASE("depth 1 completes even when a limit comes first", "[search]") {
+    Position pos = parse(Position::kStartFen);
+    SearchInfo info = search(pos, {.nodes = 1});
+    CHECK(info.depth == 1);
+    CHECK(info.pv.length == 1);
+    CHECK(pos.fen() == Position::kStartFen);
+}
+
+TEST_CASE("a stop request ends an otherwise unlimited search", "[search]") {
+    std::stop_source source;
+    source.request_stop();
+    Position pos = parse(Position::kStartFen);
+    SearchInfo info = search(pos, {}, source.get_token());
+    CHECK(info.depth >= 1);
+    CHECK(info.pv.length > 0);
+}
+
+TEST_CASE("a node limit discards the iteration it interrupts", "[search]") {
+    Position pos = parse(Position::kStartFen);
+    SearchInfo full = search(pos, {.depth = 3});
+    SearchInfo limited = search(pos, {.nodes = full.nodes + 1});
+    CHECK(limited.depth == 3);
+    CHECK(limited.nodes == full.nodes);
+}
+
+TEST_CASE("a time limit ends an otherwise unlimited search", "[search]") {
+    Position pos = parse(Position::kStartFen);
+    SearchInfo info = search(pos, {.time = std::chrono::milliseconds(20)});
+    CHECK(info.depth >= 1);
+    CHECK(info.pv.length > 0);
+}
+
+TEST_CASE("each completed depth is reported once, in order", "[search]") {
+    Position pos = parse(Position::kStartFen);
+    std::vector<int> depths;
+    SearchInfo last = search(pos, {.depth = 4}, {},
+                             [&](const SearchInfo& info) { depths.push_back(info.depth); });
+    CHECK(depths == std::vector<int>{1, 2, 3, 4});
+    CHECK(last.depth == 4);
+
+    depths.clear();
+    Position stalemate = parse("k7/8/1Q6/8/8/8/8/7K b - - 0 1");
+    search(stalemate, {}, {}, [&](const SearchInfo& info) { depths.push_back(info.depth); });
+    CHECK(depths == std::vector<int>{1});
 }

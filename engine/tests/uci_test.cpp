@@ -12,6 +12,7 @@
 using namespace zugzwang;
 using Catch::Matchers::ContainsSubstring;
 using Catch::Matchers::EndsWith;
+using Catch::Matchers::StartsWith;
 
 namespace {
 
@@ -91,4 +92,64 @@ TEST_CASE("the loop ignores unknown input and stops at quit", "[uci]") {
     CHECK(run("\n   \nnonsense\n").empty());
     CHECK(run("quit\nperft 1\n").empty());
     CHECK_THAT(run("perft 1\r\nquit\r\n"), EndsWith(kStartTotal));
+}
+
+TEST_CASE("uci and isready get their acknowledgements", "[uci]") {
+    std::string handshake = run("uci\n");
+    CHECK_THAT(handshake, StartsWith("id name Zugzwang "));
+    CHECK_THAT(handshake, ContainsSubstring("\nid author "));
+    CHECK_THAT(handshake, EndsWith("\nuciok\n"));
+    CHECK(run("isready\n") == "readyok\n");
+}
+
+TEST_CASE("go reports each depth and ends with the best move", "[uci]") {
+    std::string mateInOne = run("position fen 6k1/5ppp/8/8/8/8/8/R5K1 w - - 0 1\ngo depth 2\n");
+    CHECK_THAT(mateInOne, StartsWith("info depth 1 score cp "));
+    CHECK_THAT(mateInOne, ContainsSubstring("\ninfo depth 2 score mate 1 nodes "));
+    CHECK_THAT(mateInOne, ContainsSubstring(" pv a1a8\n"));
+    CHECK_THAT(mateInOne, EndsWith("\nbestmove a1a8\n"));
+
+    // Black's only move walks into Qh8 mate.
+    CHECK_THAT(run("position fen k7/8/1K6/8/8/8/8/7Q b - - 0 1\ngo depth 3\n"),
+               ContainsSubstring("info depth 3 score mate -1 "));
+    CHECK_THAT(run("position fen 4k3/8/8/8/8/8/8/1N2K3 w - - 0 1\ngo depth 1\n"),
+               StartsWith("info depth 1 score cp 320 "));
+}
+
+TEST_CASE("go nodes and movetime end the search on their own", "[uci]") {
+    std::string byNodes = run("go nodes 1\n");
+    CHECK_THAT(byNodes, StartsWith("info depth 1 "));
+    CHECK_THAT(byNodes, !ContainsSubstring("info depth 2"));
+    CHECK_THAT(byNodes, ContainsSubstring("\nbestmove "));
+    CHECK_THAT(run("go movetime 20\n"), ContainsSubstring("\nbestmove "));
+}
+
+TEST_CASE("stop, quit and a new go end a running search with a best move", "[uci]") {
+    CHECK_THAT(run("go infinite\nstop\n"), ContainsSubstring("\nbestmove "));
+    CHECK_THAT(run("go infinite\nquit\nisready\n"), !ContainsSubstring("readyok"));
+    CHECK_THAT(run("go infinite\nquit\n"), ContainsSubstring("\nbestmove "));
+    // End of input means no stop can arrive, so an infinite search is stopped there.
+    CHECK_THAT(run("go infinite\n"), ContainsSubstring("\nbestmove "));
+    CHECK_THAT(run("go\n"), ContainsSubstring("\nbestmove "));
+
+    std::string restarted = run("go infinite\ngo depth 1\n");
+    CHECK(restarted.find("bestmove") != restarted.rfind("bestmove"));
+}
+
+TEST_CASE("go infinite holds its best move until stop, even with nothing to search", "[uci]") {
+    std::string output = run("position fen k7/1Q6/1K6/8/8/8/8/8 b - - 0 1\ngo infinite\nisready\n"
+                             "stop\n");
+    CHECK_THAT(output, ContainsSubstring("info depth 1 score mate 0 "));
+    CHECK_THAT(output, EndsWith("bestmove 0000\n"));
+    CHECK(output.find("readyok") < output.find("bestmove"));
+}
+
+TEST_CASE("a bad go command reports it and does not search", "[uci]") {
+    for (std::string bad : {"go depth", "go depth 0", "go depth x", "go depth 3x", "go nodes -5",
+                            "go movetime", "go movetime 99999999999999999999"}) {
+        CAPTURE(bad);
+        std::string output = run(bad + "\n");
+        CHECK_THAT(output, ContainsSubstring("info string invalid go command"));
+        CHECK_THAT(output, !ContainsSubstring("bestmove"));
+    }
 }

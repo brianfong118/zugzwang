@@ -63,6 +63,9 @@ class Position {
     // Full recompute, for checking the incrementally maintained key.
     Key computeKey() const;
 
+    // A copy's history has no spare capacity; this lets the next plies be made without allocating.
+    void reserveHistory(std::size_t plies) { history_.reserve(history_.size() + plies); }
+
   private:
     // What a move destroys and unmake cannot work out from the board afterwards.
     struct Undo {

@@ -22,7 +22,7 @@ void bench(std::ostream& out) {
     Clock::time_point start = Clock::now();
     for (std::string_view fen : kBenchFens) {
         Position pos = *Position::fromFen(fen);
-        nodes += search(pos, kBenchDepth).nodes;
+        nodes += search(pos, {.depth = kBenchDepth}).nodes;
     }
     auto us = std::chrono::duration_cast<std::chrono::microseconds>(Clock::now() - start).count();
     out << "nodes " << nodes << " nps " << nodes * 1'000'000 / std::max<std::int64_t>(us, 1)

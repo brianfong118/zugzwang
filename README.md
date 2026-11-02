@@ -46,7 +46,7 @@ cmake --build build
 
 ## Try it
 
-`./build/zugzwang` reads commands from standard input. So far it understands `position`, `perft`, `bench` and `quit`. Arguments run as a single command, so `./build/zugzwang bench` prints the bench result and exits. `perft` prints each first move with its own count, which narrows a wrong total down to one move:
+`./build/zugzwang` reads commands from standard input. It speaks UCI (`uci`, `isready`, `position`, `go` with `depth`, `nodes`, `movetime` or `infinite`, `stop`, `quit`) and adds `perft` and `bench`. Arguments run as a single command, so `./build/zugzwang bench` prints the bench result and exits. `perft` prints each first move with its own count, which narrows a wrong total down to one move:
 
 ```
 Zugzwang 0.1.0

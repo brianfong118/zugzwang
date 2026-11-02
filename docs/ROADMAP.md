@@ -16,7 +16,7 @@ Tick items as they land. Versions are git tags created by the user.
 - [x] Repetition and 50-move detection
 - [x] Iterative deepening, negamax alpha-beta, material-only eval
 - [x] `bench` command; first bench log row
-- [ ] UCI loop on main thread, search on worker thread, `stop` works mid-search
+- [x] UCI loop on main thread, search on worker thread, `stop` works mid-search
 - [ ] `position` / `go` with all clock parameters
 
 ## v1.0 — Lichess

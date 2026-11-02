@@ -4,7 +4,12 @@
 #include "position.h"
 
 #include <array>
+#include <chrono>
 #include <cstdint>
+#include <functional>
+#include <limits>
+#include <optional>
+#include <stop_token>
 
 namespace zugzwang {
 
@@ -26,7 +31,16 @@ struct SearchInfo {
     PvLine pv;
 };
 
-// Iterative deepening from depth 1 to depth, capped at kMaxPly; pos is unchanged on return.
-SearchInfo search(Position& pos, int depth);
+struct SearchLimits {
+    int depth = kMaxPly;
+    std::uint64_t nodes = std::numeric_limits<std::uint64_t>::max();
+    std::optional<std::chrono::milliseconds> time = std::nullopt;
+};
+
+using SearchReport = std::function<void(const SearchInfo&)>;
+
+// Deepens until a limit or a stop request, calling report after each depth; pos ends unchanged.
+SearchInfo search(Position& pos, const SearchLimits& limits, std::stop_token stop = {},
+                  const SearchReport& report = {});
 
 } // namespace zugzwang
