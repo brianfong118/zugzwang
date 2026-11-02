@@ -43,6 +43,11 @@ void checkLegal(std::string_view fen, Move m) {
     CHECK(pos.make(m));
 }
 
+void play(Position& pos, std::initializer_list<Move> moves) {
+    for (Move m : moves)
+        REQUIRE(pos.make(m));
+}
+
 } // namespace
 
 TEST_CASE("start position parses", "[position]") {
@@ -317,4 +322,33 @@ TEST_CASE("random games keep all state consistent and unwind to the start", "[ma
         CHECK(pos.fen() == fen);
         CHECK(pos.key() == rootKey);
     }
+}
+
+TEST_CASE("the fifty-move rule draws once the halfmove clock reaches 100", "[draw]") {
+    Position pos = parse("4k3/8/8/8/8/8/P7/R3K3 w - - 99 80");
+    CHECK_FALSE(pos.isDraw(0));
+    REQUIRE(pos.make(Move(kA2, kA3)));
+    CHECK_FALSE(pos.isDraw(1));
+    pos.unmake(Move(kA2, kA3));
+    REQUIRE(pos.make(Move(kA1, kB1)));
+    CHECK(pos.isDraw(1));
+}
+
+TEST_CASE("a repeat inside the search is a draw at its second occurrence", "[draw]") {
+    Position pos = parse(Position::kStartFen);
+    play(pos, {Move(kE2, kE4), Move(kG8, kF6), Move(kG1, kF3), Move(kF6, kG8), Move(kF3, kG1)});
+    // The position after e2e4 is back. Searching from the start, it first occurred in the search.
+    CHECK(pos.isDraw(5));
+    // Searching from after e2e4, its first occurrence is the root, so the game has seen it twice.
+    CHECK_FALSE(pos.isDraw(4));
+}
+
+TEST_CASE("a repeat reaching back before the root needs a third occurrence", "[draw]") {
+    // The clock exceeds the recorded history, so the scan must stop where the history starts.
+    Position pos = parse("4k3/8/8/8/8/8/8/R3K3 w - - 30 60");
+    const auto cycle = {Move(kA1, kA2), Move(kE8, kD8), Move(kA2, kA1), Move(kD8, kE8)};
+    play(pos, cycle);
+    CHECK_FALSE(pos.isDraw(0));
+    play(pos, cycle);
+    CHECK(pos.isDraw(0));
 }

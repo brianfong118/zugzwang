@@ -35,6 +35,8 @@ Decisions and their reasons. When a decision changes, mark the old one supersede
 - v1: iterative deepening, negamax alpha-beta, quiescence (captures only, stand-pat), MVV-LVA ordering. Quiescence is in v1 because material-only eval without it hangs pieces at the horizon and the bot would look broken rather than weak.
 - v1.x: transposition table, killer and history ordering, null-move pruning, late move reductions, check extensions, aspiration windows. One change per SPRT.
 - Search runs on a worker thread; the UCI thread only parses input and sets an atomic stop flag. Required for `stop` to work mid-search.
+- `Position::isDraw(ply)` covers the fifty-move rule and repetition, where `ply` is the distance from the search root. If the earlier occurrence is after the root, a second occurrence is already a draw: whichever side steered into the cycle can repeat it again. If the earlier occurrence is the root or before it, the game rule applies and a third occurrence is needed. Ethereal draws the line in the same place, and Stockfish's `StateInfo::repetition` encodes the same split. The scan covers only plies within the halfmove clock, since a capture or pawn move cannot be undone.
+- The fifty-move rule ignores the exception for checkmate on the hundredth ply, as Ethereal does. Honouring it needs a legal-move search at every such node, and the case almost never arises.
 
 ## Evaluation
 - v1: tapered material + PeSTO piece-square tables. Public, known-good values; removes tuning from the critical path to Lichess.

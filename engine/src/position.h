@@ -53,6 +53,9 @@ class Position {
     bool isAttacked(Square s, Color by) const;
     bool inCheck() const { return isAttacked(kingSquare(sideToMove_), ~sideToMove_); }
 
+    // Fifty-move rule or repetition; ply is the distance from the search root (see DESIGN.md).
+    bool isDraw(int ply) const;
+
     // m must come from generateMoves. If it is illegal, returns false with the position unchanged.
     [[nodiscard]] bool make(Move m);
     void unmake(Move m);

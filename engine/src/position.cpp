@@ -3,6 +3,7 @@
 #include "attacks.h"
 #include "zobrist.h"
 
+#include <algorithm>
 #include <bit>
 #include <cctype>
 #include <charconv>
@@ -204,6 +205,19 @@ bool Position::isAttacked(Square s, Color by) const {
            (attacks::knight(s) & pieces(by, kKnight)) | (attacks::king(s) & pieces(by, kKing)) |
            (attacks::rook(s, occupied()) & (pieces(by, kRook) | queens)) |
            (attacks::bishop(s, occupied()) & (pieces(by, kBishop) | queens));
+}
+
+bool Position::isDraw(int ply) const {
+    if (halfmoveClock_ >= 100) return true;
+
+    // history_[n - i] holds the position i plies ago. Nothing before the last capture or pawn move
+    // can recur, a repeat needs the same side to move, and undoing a move takes four plies.
+    int n = int(history_.size());
+    int end = std::min(halfmoveClock_, n);
+    int beforeRoot = 0;
+    for (int i = 4; i <= end; i += 2)
+        if (history_[n - i].key == key_ && (i < ply || ++beforeRoot == 2)) return true;
+    return false;
 }
 
 bool Position::make(Move m) {

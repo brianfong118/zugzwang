@@ -62,10 +62,6 @@ e1f2: 1
 Nodes searched: 6
 ```
 
-## How it's developed
-
-Claude Code writes the code, and the author reviews and commits it.
-
 ## License
 
 [MIT](LICENSE)

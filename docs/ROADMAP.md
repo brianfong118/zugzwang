@@ -15,7 +15,7 @@ Tick items as they land. Versions are git tags created by the user.
 ## v0.2 — UCI
 - [ ] UCI loop on main thread, search on worker thread, `stop` works mid-search
 - [ ] `position` / `go` with all clock parameters
-- [ ] Repetition and 50-move detection
+- [x] Repetition and 50-move detection
 - [ ] `bench` command; first bench log row
 
 ## v1.0 — Lichess
