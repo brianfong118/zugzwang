@@ -113,8 +113,13 @@ TEST_CASE("go reports each depth and ends with the best move", "[uci]") {
     // Black's only move walks into Qh8 mate.
     CHECK_THAT(run("position fen k7/8/1K6/8/8/8/8/7Q b - - 0 1\ngo depth 3\n"),
                ContainsSubstring("info depth 3 score mate -1 "));
-    CHECK_THAT(run("position fen 4k3/8/8/8/8/8/8/1N2K3 w - - 0 1\ngo depth 1\n"),
-               StartsWith("info depth 1 score cp 320 "));
+
+    // Scores are from the side to move, so the extra knight counts against Black.
+    std::string white = run("position fen 4k3/8/8/8/8/8/8/1N2K3 w - - 0 1\ngo depth 1\n");
+    CHECK_THAT(white, StartsWith("info depth 1 score cp "));
+    CHECK_THAT(white, !ContainsSubstring("score cp -"));
+    CHECK_THAT(run("position fen 4k3/8/8/8/8/8/8/1N2K3 b - - 0 1\ngo depth 1\n"),
+               StartsWith("info depth 1 score cp -"));
 }
 
 TEST_CASE("go nodes and movetime end the search on their own", "[uci]") {

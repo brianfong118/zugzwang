@@ -22,7 +22,7 @@ Tick items as they land. Versions are git tags created by the user.
 ## v1.0 — Lichess
 - [x] fastchess installed, opening book in `tools/book.epd`, baseline binary in `baseline/`
 - [x] Quiescence, MVV-LVA
-- [ ] PeSTO tapered eval, replacing material-only
+- [x] PeSTO tapered eval, replacing material-only
 - [ ] Time management
 - [ ] Fresh Lichess account, upgraded to BOT via API
 - [ ] lichess-bot cloned into `lichess-bot/`, `config.yml` set (token, engine dir); confirm `git status` shows nothing from `lichess-bot/` before first run
@@ -54,6 +54,7 @@ Tick items as they land. Versions are git tags created by the user.
 | 2026-11-02 | First bench: iterative deepening, alpha-beta, material eval; 10 positions at depth 5 | 10503664 | 21.2M |
 | 2026-11-05 | MVV-LVA move ordering | 686199 | 9.1M |
 | 2026-11-05 | Quiescence search | 942116 | 18.5M |
+| 2026-11-05 | PeSTO tapered eval | 1202200 | 5.3M |
 
 ## SPRT log
 | Date | Change | Result | Games | W-L-D | Elo |
@@ -61,3 +62,4 @@ Tick items as they land. Versions are git tags created by the user.
 | 2026-11-02 | Setup check: v0.2 against itself, capped at 200 games | Inconclusive, as expected (LLR 0.09) | 200 | 89-84-27 | +8.7 ± 31.8 |
 | 2026-11-05 | MVV-LVA move ordering | Pass (LLR 2.95) | 362 | 263-26-73 | +272.2 ± 37.1 |
 | 2026-11-05 | Quiescence search | Pass (LLR 2.94) | 436 | 247-45-144 | +174.2 ± 28.3 |
+| 2026-11-05 | PeSTO tapered eval | Pass (LLR 2.95) | 308 | 289-10-9 | +522.5 ± 87.2 |
