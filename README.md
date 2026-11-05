@@ -4,7 +4,7 @@
 
 A UCI chess engine in C++20, being built one measured milestone at a time. The goal is a bot on Lichess with hand-crafted evaluation, then a self-trained NNUE.
 
-**Status: v0.2.** It speaks UCI and plays under any time control, with an alpha-beta search on material alone. That makes it legal but weak. v1.0 adds quiescence search, move ordering, a real evaluation and smarter time management, then puts it on Lichess. See the [roadmap](docs/ROADMAP.md).
+**Status: v1.0.** It searches with move ordering and quiescence, evaluates with PeSTO's tapered piece-square tables, and is set up to play on Lichess through lichess-bot. Every change meant to gain strength passed an SPRT against the build before it; the results are in the [roadmap](docs/ROADMAP.md). v1.x adds a transposition table and pruning, one measured change at a time.
 
 ## Verified move generation
 
@@ -31,7 +31,10 @@ Speed is about 21 million nodes per second from the start position and 27 millio
 - **Legality:** moves are generated pseudo-legally and checked in `make`, which undoes any illegal move itself.
 - **Hashing:** a Zobrist key updated incrementally on every move.
 - **Search:** iterative-deepening negamax with alpha-beta pruning on its own thread, so `stop` works mid-search. Mates score by distance, and repetitions and the fifty-move rule score as draws.
-- **Time:** about a thirtieth of the remaining clock plus the increment, never more than a tenth of the clock.
+- **Move ordering:** captures first, most valuable victim and then least valuable attacker (MVV-LVA). Moves are picked one at a time, so a cutoff skips ordering the rest.
+- **Quiescence:** at the end of the main search, captures and queen promotions are played out until the position is quiet, so no position is scored mid-exchange.
+- **Evaluation:** PeSTO's piece values and piece-square tables, blending middlegame and endgame tables by the material left on the board.
+- **Time:** a budget of about a thirtieth of the remaining clock plus the increment, never more than a tenth of the clock. No new depth starts after half the budget, and the search stops mid-depth at a tenth of the clock.
 - **Bench:** `bench` searches fixed positions to a fixed depth. Its node count changes exactly when search behaviour does, so every search change records it.
 
 [DESIGN.md](docs/DESIGN.md) records each decision and the reason for it.
@@ -52,7 +55,7 @@ cmake --build build
 `./build/zugzwang` reads commands from standard input. It speaks UCI (`uci`, `isready`, `position`, `go` with clocks, `depth`, `nodes`, `movetime` or `infinite`, `stop`, `quit`) and adds `perft` and `bench`. Arguments run as a single command, so `./build/zugzwang bench` prints the bench result and exits. `perft` prints each first move with its own count, which narrows a wrong total down to one move:
 
 ```
-Zugzwang 0.2.0
+Zugzwang 1.0.0
 position fen 4k3/8/8/8/8/8/4P3/4K3 w - - 0 1
 perft 1
 e2e3: 1
