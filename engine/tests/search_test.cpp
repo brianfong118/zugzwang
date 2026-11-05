@@ -10,6 +10,7 @@
 #include <initializer_list>
 #include <stop_token>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 using namespace zugzwang;
@@ -58,6 +59,13 @@ int minimax(Position& pos, int depth, int ply) {
     }
     if (best == -kInfinity) return pos.inCheck() ? -kMate + ply : 0;
     return best;
+}
+
+// Soft and hard limits in milliseconds; count() is long on Linux but long long on MinGW.
+std::pair<long long, long long> budget(long long remaining, long long increment) {
+    TimeBudget b =
+        timeBudget(std::chrono::milliseconds(remaining), std::chrono::milliseconds(increment));
+    return {b.soft.count(), b.hard.count()};
 }
 
 } // namespace
@@ -158,9 +166,9 @@ TEST_CASE("a node limit discards the iteration it interrupts", "[search]") {
     CHECK(limited.nodes == full.nodes);
 }
 
-TEST_CASE("a time limit ends an otherwise unlimited search", "[search]") {
+TEST_CASE("a hard time limit ends an otherwise unlimited search", "[search]") {
     Position pos = parse(Position::kStartFen);
-    SearchInfo info = search(pos, {.time = std::chrono::milliseconds(20)});
+    SearchInfo info = search(pos, {.hardTime = std::chrono::milliseconds(20)});
     CHECK(info.depth >= 1);
     CHECK(info.pv.length > 0);
 }
@@ -179,11 +187,17 @@ TEST_CASE("each completed depth is reported once, in order", "[search]") {
     CHECK(depths == std::vector<int>{1});
 }
 
+TEST_CASE("a soft time limit finishes the depth in progress and starts no other", "[search]") {
+    Position pos = parse(Position::kStartFen);
+    SearchInfo soft = search(pos, {.softTime = std::chrono::milliseconds(0)});
+    CHECK(soft.depth == 1);
+    CHECK(soft.nodes == search(pos, {.depth = 1}).nodes);
+}
+
 TEST_CASE("the time budget spreads the clock and caps it when it runs low", "[search]") {
-    using std::chrono::milliseconds;
-    CHECK(timeBudget(milliseconds(180'000), milliseconds(2'000)) == milliseconds(8'000));
-    CHECK(timeBudget(milliseconds(60'000), milliseconds(0)) == milliseconds(2'000));
+    CHECK(budget(180'000, 2'000) == std::pair{4'000LL, 18'000LL});
+    CHECK(budget(60'000, 0) == std::pair{1'000LL, 6'000LL});
     // remaining/30 + increment would be 2333 ms, almost a quarter of what is left.
-    CHECK(timeBudget(milliseconds(10'000), milliseconds(2'000)) == milliseconds(1'000));
-    CHECK(timeBudget(milliseconds(0), milliseconds(0)) == milliseconds(0));
+    CHECK(budget(10'000, 2'000) == std::pair{500LL, 1'000LL});
+    CHECK(budget(0, 0) == std::pair{0LL, 0LL});
 }

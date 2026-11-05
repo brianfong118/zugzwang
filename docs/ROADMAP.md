@@ -23,7 +23,7 @@ Tick items as they land. Versions are git tags created by the user.
 - [x] fastchess installed, opening book in `tools/book.epd`, baseline binary in `baseline/`
 - [x] Quiescence, MVV-LVA
 - [x] PeSTO tapered eval, replacing material-only
-- [ ] Time management
+- [x] Time management
 - [ ] Fresh Lichess account, upgraded to BOT via API
 - [ ] lichess-bot cloned into `lichess-bot/`, `config.yml` set (token, engine dir); confirm `git status` shows nothing from `lichess-bot/` before first run
 - [ ] First game played; initial rating logged below
@@ -63,3 +63,5 @@ Tick items as they land. Versions are git tags created by the user.
 | 2026-11-05 | MVV-LVA move ordering | Pass (LLR 2.95) | 362 | 263-26-73 | +272.2 ± 37.1 |
 | 2026-11-05 | Quiescence search | Pass (LLR 2.94) | 436 | 247-45-144 | +174.2 ± 28.3 |
 | 2026-11-05 | PeSTO tapered eval | Pass (LLR 2.95) | 308 | 289-10-9 | +522.5 ± 87.2 |
+| 2026-11-05 | Soft limit at the old budget, hard limit remaining/10 | Fail (LLR -2.96) | 2648 | 913-1073-662 | -21.0 ± 11.3 |
+| 2026-11-05 | Soft limit at half the budget, hard limit remaining/10 | Pass (LLR 2.97) | 2028 | 864-668-496 | +33.7 ± 13.4 |

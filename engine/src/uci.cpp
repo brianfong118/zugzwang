@@ -97,14 +97,15 @@ std::optional<GoCommand> parseGo(std::istringstream& args, Color us) {
         else if (token == "nodes")
             go.limits.nodes = std::uint64_t(value);
         else if (token == "movetime")
-            go.limits.time = std::chrono::milliseconds(value);
+            go.limits.hardTime = std::chrono::milliseconds(value);
     }
 
     if (remaining) {
-        auto budget =
+        TimeBudget budget =
             timeBudget(std::chrono::milliseconds(*remaining), std::chrono::milliseconds(increment));
+        go.limits.softTime = budget.soft;
         // Given movetime as well, the shorter limit wins, as in Stockfish.
-        go.limits.time = std::min(go.limits.time.value_or(budget), budget);
+        go.limits.hardTime = std::min(go.limits.hardTime.value_or(budget.hard), budget.hard);
     }
     // Without a limit the search ends only at kMaxPly, so it must wait for stop like go infinite.
     go.infinite = go.infinite || (!limited && !remaining);

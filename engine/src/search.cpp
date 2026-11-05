@@ -58,9 +58,10 @@ struct Searcher {
 // Reading the clock or the stop request costs far more than a compare, so both wait 1024 nodes.
 bool Searcher::shouldStop() {
     if (canStop && !stopped)
-        stopped = nodes >= limits.nodes ||
-                  (nodes % 1024 == 0 && (stop.stop_requested() ||
-                                         (limits.time && Clock::now() - start >= *limits.time)));
+        stopped =
+            nodes >= limits.nodes ||
+            (nodes % 1024 == 0 && (stop.stop_requested() ||
+                                   (limits.hardTime && Clock::now() - start >= *limits.hardTime)));
     return stopped;
 }
 
@@ -134,9 +135,10 @@ int Searcher::quiesce(Position& pos, int ply, int alpha, int beta) {
 
 } // namespace
 
-std::chrono::milliseconds timeBudget(std::chrono::milliseconds remaining,
-                                     std::chrono::milliseconds increment) {
-    return std::min(remaining / 30 + increment, remaining / 10);
+TimeBudget timeBudget(std::chrono::milliseconds remaining, std::chrono::milliseconds increment) {
+    std::chrono::milliseconds hard = remaining / 10;
+    // A depth started past half the budget would usually end beyond it.
+    return {std::min(remaining / 30 + increment, hard) / 2, hard};
 }
 
 SearchInfo search(Position& pos, const SearchLimits& limits, std::stop_token stop,
@@ -155,6 +157,8 @@ SearchInfo search(Position& pos, const SearchLimits& limits, std::stop_token sto
         if (report) report(info);
         // With no legal move at the root, deeper searches cannot change the result.
         if (pv.length == 0) break;
+        // The next depth usually costs more than all before it, so a late start would be cut off.
+        if (limits.softTime && Clock::now() - searcher.start >= *limits.softTime) break;
     }
     return info;
 }

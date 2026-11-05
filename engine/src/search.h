@@ -43,14 +43,20 @@ inline std::uint64_t nodesPerSecond(std::uint64_t nodes, Clock::duration elapsed
 struct SearchLimits {
     int depth = kMaxPly;
     std::uint64_t nodes = std::numeric_limits<std::uint64_t>::max();
-    std::optional<std::chrono::milliseconds> time = std::nullopt;
+    // No iteration starts after softTime; hardTime stops the search in the middle of one.
+    std::optional<std::chrono::milliseconds> softTime = std::nullopt;
+    std::optional<std::chrono::milliseconds> hardTime = std::nullopt;
 };
 
 using SearchReport = std::function<void(const SearchInfo&)>;
 
-// remaining/30 + increment spreads the clock over the game; the remaining/10 cap guards a low one.
-std::chrono::milliseconds timeBudget(std::chrono::milliseconds remaining,
-                                     std::chrono::milliseconds increment);
+struct TimeBudget {
+    std::chrono::milliseconds soft;
+    std::chrono::milliseconds hard;
+};
+
+// remaining/30 + increment spreads the clock over the game; remaining/10 caps both limits.
+TimeBudget timeBudget(std::chrono::milliseconds remaining, std::chrono::milliseconds increment);
 
 // Deepens until a limit or a stop request, calling report after each depth; pos ends unchanged.
 SearchInfo search(Position& pos, const SearchLimits& limits, std::stop_token stop = {},
