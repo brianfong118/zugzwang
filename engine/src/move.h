@@ -51,6 +51,7 @@ inline constexpr int kMaxMoves = 15 * 27 + 8 + 2;
 class MoveList {
   public:
     void add(Move m) { moves_[size_++] = m; }
+    Move& operator[](int i) { return moves_[i]; }
     const Move* begin() const { return moves_.data(); }
     const Move* end() const { return moves_.data() + size_; }
     int size() const { return size_; }

@@ -52,8 +52,10 @@ Tick items as they land. Versions are git tags created by the user.
 | Date | Change | Nodes | NPS |
 |------|--------|-------|-----|
 | 2026-11-02 | First bench: iterative deepening, alpha-beta, material eval; 10 positions at depth 5 | 10503664 | 21.2M |
+| 2026-11-05 | MVV-LVA move ordering | 686199 | 9.1M |
 
 ## SPRT log
 | Date | Change | Result | Games | W-L-D | Elo |
 |------|--------|--------|-------|-------|-----|
 | 2026-11-02 | Setup check: v0.2 against itself, capped at 200 games | Inconclusive, as expected (LLR 0.09) | 200 | 89-84-27 | +8.7 ± 31.8 |
+| 2026-11-05 | MVV-LVA move ordering | Pass (LLR 2.95) | 362 | 263-26-73 | +272.2 ± 37.1 |

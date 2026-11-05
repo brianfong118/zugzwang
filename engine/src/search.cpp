@@ -4,10 +4,42 @@
 #include "movegen.h"
 
 #include <algorithm>
+#include <array>
+#include <utility>
 
 namespace zugzwang {
 
 namespace {
+
+using MoveScores = std::array<int, kMaxMoves>;
+
+// MVV-LVA: the victim decides first, since 8 exceeds any attacker index. Quiet moves score 0.
+MoveScores scoreMoves(const Position& pos, const MoveList& moves) {
+    MoveScores scores;
+    int i = 0;
+    for (Move m : moves) {
+        Piece victim = pos.pieceOn(m.to());
+        int score = 0;
+        if (victim != kNoPiece || m.flag() == kEnPassant) {
+            PieceType type = victim == kNoPiece ? kPawn : typeOf(victim);
+            score = 8 * (type + 1) - typeOf(pos.pieceOn(m.from()));
+        }
+        // Promoting gains about a queen, so it ranks with capturing one.
+        if (m.flag() == kPromoteQueen) score += 8 * (kQueen + 1);
+        scores[i++] = score;
+    }
+    return scores;
+}
+
+// Selection, not a full sort: after an early cutoff the remaining moves are never ordered.
+Move pickNext(MoveList& moves, MoveScores& scores, int i) {
+    int best = i;
+    for (int j = i + 1; j < moves.size(); ++j)
+        if (scores[j] > scores[best]) best = j;
+    std::swap(moves[i], moves[best]);
+    std::swap(scores[i], scores[best]);
+    return moves[i];
+}
 
 struct Searcher {
     const SearchLimits& limits;
@@ -42,7 +74,10 @@ int Searcher::negamax(Position& pos, int depth, int ply, int alpha, int beta, Pv
 
     PvLine childPv;
     int best = -kInfinity;
-    for (Move m : generateMoves(pos)) {
+    MoveList moves = generateMoves(pos);
+    MoveScores scores = scoreMoves(pos, moves);
+    for (int i = 0; i < moves.size(); ++i) {
+        Move m = pickNext(moves, scores, i);
         if (!pos.make(m)) continue;
         int score = -negamax(pos, depth - 1, ply + 1, -beta, -alpha, childPv);
         pos.unmake(m);

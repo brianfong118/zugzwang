@@ -1,10 +1,13 @@
+#include "eval.h"
 #include "movegen.h"
 #include "search.h"
 #include "test_util.h"
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <algorithm>
 #include <chrono>
+#include <initializer_list>
 #include <stop_token>
 #include <string_view>
 #include <vector>
@@ -30,7 +33,33 @@ bool hasLegalMove(Position& pos) {
     return false;
 }
 
+// Searches every move, with no pruning and no ordering, for the search to agree with.
+int minimax(Position& pos, int depth, int ply) {
+    if (ply > 0 && pos.isDraw(ply)) return 0;
+    if (depth == 0) return evaluate(pos);
+    int best = -kInfinity;
+    for (Move m : generateMoves(pos)) {
+        if (!pos.make(m)) continue;
+        best = std::max(best, -minimax(pos, depth - 1, ply + 1));
+        pos.unmake(m);
+    }
+    if (best == -kInfinity) return pos.inCheck() ? -kMate + ply : 0;
+    return best;
+}
+
 } // namespace
+
+// Alpha-beta skips only lines that cannot change the result, whatever order it tries moves in.
+TEST_CASE("search returns the minimax score", "[search]") {
+    for (std::string_view fen :
+         {Position::kStartFen, kKiwipete, kPosition3, kPosition4, kPosition5, kPosition6}) {
+        CAPTURE(fen);
+        Position pos = parse(fen);
+        CHECK(search(pos, {.depth = 3}).score == minimax(pos, 3, 0));
+    }
+    Position mateInTwo = parse("k7/8/2K5/8/8/8/8/7R w - - 0 1");
+    CHECK(search(mateInTwo, {.depth = 4}).score == minimax(mateInTwo, 4, 0));
+}
 
 TEST_CASE("search finds a mate in one", "[search]") {
     SearchInfo info = searchFen("6k1/5ppp/8/8/8/8/8/R5K1 w - - 0 1", 2);
