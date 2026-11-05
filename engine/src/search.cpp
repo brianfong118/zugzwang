@@ -52,6 +52,7 @@ struct Searcher {
 
     bool shouldStop();
     int negamax(Position& pos, int depth, int ply, int alpha, int beta, PvLine& pv);
+    int quiesce(Position& pos, int ply, int alpha, int beta);
 };
 
 // Reading the clock or the stop request costs far more than a compare, so both wait 1024 nodes.
@@ -65,12 +66,12 @@ bool Searcher::shouldStop() {
 
 // Fail-soft: the result may lie outside [alpha, beta], where it is a bound on the true score.
 int Searcher::negamax(Position& pos, int depth, int ply, int alpha, int beta, PvLine& pv) {
-    ++nodes;
     pv.length = 0;
+    if (depth == 0) return quiesce(pos, ply, alpha, beta);
+    ++nodes;
     if (shouldStop()) return 0;
     // The root must return a move even in a drawn position.
     if (ply > 0 && pos.isDraw(ply)) return 0;
-    if (depth == 0) return evaluate(pos);
 
     PvLine childPv;
     int best = -kInfinity;
@@ -97,6 +98,37 @@ int Searcher::negamax(Position& pos, int depth, int ply, int alpha, int beta, Pv
 
     // No legal move: checkmate or stalemate.
     if (best == -kInfinity) return pos.inCheck() ? -kMate + ply : 0;
+    return best;
+}
+
+// Plays out captures until the position is quiet, so no leaf is scored mid-exchange.
+int Searcher::quiesce(Position& pos, int ply, int alpha, int beta) {
+    ++nodes;
+    if (shouldStop()) return 0;
+    if (pos.isDraw(ply)) return 0;
+
+    // Standing pat: the side to move may decline every capture, so the eval is a lower bound.
+    int best = evaluate(pos);
+    if (best >= beta || ply >= kMaxPly) return best;
+    alpha = std::max(alpha, best);
+
+    MoveList moves = generateNoisy(pos);
+    MoveScores scores = scoreMoves(pos, moves);
+    for (int i = 0; i < moves.size(); ++i) {
+        Move m = pickNext(moves, scores, i);
+        if (!pos.make(m)) continue;
+        int score = -quiesce(pos, ply + 1, -beta, -alpha);
+        pos.unmake(m);
+        if (stopped) return 0;
+
+        if (score > best) {
+            best = score;
+            if (score > alpha) {
+                alpha = score;
+                if (score >= beta) break;
+            }
+        }
+    }
     return best;
 }
 

@@ -33,10 +33,23 @@ bool hasLegalMove(Position& pos) {
     return false;
 }
 
+// Standing pat or the best capture, with every capture searched.
+int quiescenceMinimax(Position& pos, int ply) {
+    if (pos.isDraw(ply)) return 0;
+    int best = evaluate(pos);
+    if (ply >= kMaxPly) return best;
+    for (Move m : generateNoisy(pos)) {
+        if (!pos.make(m)) continue;
+        best = std::max(best, -quiescenceMinimax(pos, ply + 1));
+        pos.unmake(m);
+    }
+    return best;
+}
+
 // Searches every move, with no pruning and no ordering, for the search to agree with.
 int minimax(Position& pos, int depth, int ply) {
+    if (depth == 0) return quiescenceMinimax(pos, ply);
     if (ply > 0 && pos.isDraw(ply)) return 0;
-    if (depth == 0) return evaluate(pos);
     int best = -kInfinity;
     for (Move m : generateMoves(pos)) {
         if (!pos.make(m)) continue;
@@ -50,15 +63,27 @@ int minimax(Position& pos, int depth, int ply) {
 } // namespace
 
 // Alpha-beta skips only lines that cannot change the result, whatever order it tries moves in.
+// Endgames only: unpruned quiescence passes 200M nodes on Kiwipete even at depth 1.
 TEST_CASE("search returns the minimax score", "[search]") {
-    for (std::string_view fen :
-         {Position::kStartFen, kKiwipete, kPosition3, kPosition4, kPosition5, kPosition6}) {
+    for (std::string_view fen : std::initializer_list<std::string_view>{
+             kPosition3,
+             "1K6/1P1k4/8/8/8/8/r7/2R5 w - - 0 1",
+             "8/k7/3p4/p2P1p2/P2P1P2/8/8/K7 w - - 0 1",
+             "4k3/8/4p3/3p4/8/8/8/3QK3 w - - 0 1",
+             "4k3/8/2p5/3p4/8/8/q2R4/4K3 w - - 0 1",
+             "k7/8/2K5/8/8/8/8/7R w - - 0 1",
+         }) {
         CAPTURE(fen);
         Position pos = parse(fen);
-        CHECK(search(pos, {.depth = 3}).score == minimax(pos, 3, 0));
+        CHECK(search(pos, {.depth = 4}).score == minimax(pos, 4, 0));
     }
-    Position mateInTwo = parse("k7/8/2K5/8/8/8/8/7R w - - 0 1");
-    CHECK(search(mateInTwo, {.depth = 4}).score == minimax(mateInTwo, 4, 0));
+}
+
+TEST_CASE("search sees the recapture beyond its depth", "[search]") {
+    // Without quiescence, depth 1 scores Qxd5 a pawn up and never sees exd5.
+    SearchInfo info = searchFen("4k3/8/4p3/3p4/8/8/8/3QK3 w - - 0 1", 1);
+    REQUIRE(info.pv.length > 0);
+    CHECK(info.pv.moves[0] != Move(kD1, kD5));
 }
 
 TEST_CASE("search finds a mate in one", "[search]") {
