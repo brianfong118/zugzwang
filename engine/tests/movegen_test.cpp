@@ -4,7 +4,9 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <algorithm>
+#include <initializer_list>
 #include <string>
+#include <string_view>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -15,9 +17,10 @@ namespace {
 
 using Moves = std::vector<std::string>;
 
-Moves movesFrom(std::string_view fen, Square from) {
+Moves movesFrom(std::string_view fen, Square from,
+                MoveList (*generate)(const Position&) = generateMoves) {
     Moves out;
-    for (Move m : generateMoves(parse(fen)))
+    for (Move m : generate(parse(fen)))
         if (m.from() == from) out.push_back(toUci(m));
     std::sort(out.begin(), out.end());
     return out;
@@ -26,6 +29,28 @@ Moves movesFrom(std::string_view fen, Square from) {
 bool generates(std::string_view fen, Move move) {
     MoveList moves = generateMoves(parse(fen));
     return std::find(moves.begin(), moves.end(), move) != moves.end();
+}
+
+bool isNoisy(const Position& pos, Move m) {
+    if (m.isPromotion()) return m.promotionType() == kQueen;
+    return m.flag() == kEnPassant || pos.pieceOn(m.to()) != kNoPiece;
+}
+
+// Builds the FEN only on a mismatch, rather than at each of the ~280k nodes walked.
+void checkNoisyTree(Position& pos, int depth) {
+    MoveList all = generateMoves(pos);
+    std::vector<Move> expected;
+    for (Move m : all)
+        if (isNoisy(pos, m)) expected.push_back(m);
+    MoveList noisy = generateNoisy(pos);
+    if (!std::is_permutation(noisy.begin(), noisy.end(), expected.begin(), expected.end()))
+        FAIL("noisy moves differ in " << pos.fen());
+    if (depth == 0) return;
+    for (Move m : all) {
+        if (!pos.make(m)) continue;
+        checkNoisyTree(pos, depth - 1);
+        pos.unmake(m);
+    }
 }
 
 } // namespace
@@ -126,4 +151,24 @@ TEST_CASE("castling needs the right and an empty path", "[movegen]") {
 
     // Castling through an attacked square is rejected at make time, not here.
     CHECK(generates("r3k2r/8/8/8/5r2/8/8/R3K2R w KQkq - 0 1", Move(kE1, kG1, kCastling)));
+}
+
+TEST_CASE("noisy moves are captures and queen promotions only", "[movegen]") {
+    CHECK(movesFrom("1n2k3/P7/8/8/8/8/8/4K3 w - - 0 1", kA7, generateNoisy) ==
+          Moves{"a7a8q", "a7b8q"});
+    CHECK(movesFrom("4k3/8/8/8/8/8/7p/4K1N1 b - - 0 1", kH2, generateNoisy) ==
+          Moves{"h2g1q", "h2h1q"});
+    CHECK(movesFrom("4k3/8/8/3pP3/8/8/8/4K3 w - d6 0 1", kE5, generateNoisy) == Moves{"e5d6"});
+    CHECK(movesFrom("4k3/8/8/8/R2p4/8/P7/4K3 w - - 0 1", kA4, generateNoisy) == Moves{"a4d4"});
+    CHECK(movesFrom("r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1", kE1, generateNoisy).empty());
+}
+
+TEST_CASE("noisy moves are the full list filtered, at every node of the perft trees", "[movegen]") {
+    for (std::string_view fen :
+         {Position::kStartFen, kKiwipete, kPosition3, kPosition4, kPosition5, kPosition6}) {
+        CAPTURE(fen);
+        Position pos = parse(fen);
+        checkNoisyTree(pos, 3);
+        CHECK(pos.fen() == fen);
+    }
 }
