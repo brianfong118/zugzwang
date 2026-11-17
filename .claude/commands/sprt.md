@@ -16,5 +16,5 @@ Baseline binary: `$1` (default `baseline/zugzwang`). Upper bound in normalized E
      -sprt elo0=0 elo1=<elo1> alpha=0.05 beta=0.05 model=normalized -ratinginterval 100
    ```
    Let it run until SPRT accepts H0 or H1, or the rounds run out.
-4. Report result (pass / fail / inconclusive), games, W-L-D, pentanomial counts, LLR, Elo ± error. A time loss, illegal move or crash invalidates the run: report it and fix the engine first; `sprt/last.pgn` has the games. Append a row to the SPRT log in `docs/ROADMAP.md`.
+4. Report result (pass / fail / inconclusive), games, W-L-D, pentanomial counts, LLR, Elo ± error. A time loss, illegal move or crash invalidates the run: report it and fix the engine first; `sprt/last.pgn` has the games. Append a row to the SPRT log in `docs/ROADMAP.md`, with machine `PC` on Windows and `laptop` on Linux.
 5. Pass is required before an Elo-intended change is done. Fail means revert or rework, never "keep anyway". Once a passing change is committed, copy `build/zugzwang` to `baseline/zugzwang`.

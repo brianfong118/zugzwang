@@ -6,7 +6,7 @@ allowed-tools: Bash(cmake:*), Bash(./build/*), Read, Edit
 2. `./build/zugzwang bench`; read the final `nodes N nps M` line.
 3. Compare N with the latest row of the bench log in `docs/ROADMAP.md`.
    - Unchanged: the change is non-functional; report nps only.
-   - Changed: the change is functional; append a row (date, short description, nodes, nps).
+   - Changed: the change is functional; append a row (date, short description, machine, nodes, nps). Machine is `PC` on Windows and `laptop` on Linux.
 4. Print `Bench: N` for the commit message.
 
 $ARGUMENTS

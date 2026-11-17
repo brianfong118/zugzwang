@@ -24,9 +24,9 @@ Tick items as they land. Versions are git tags created by the user.
 - [x] Quiescence, MVV-LVA
 - [x] PeSTO tapered eval, replacing material-only
 - [x] Time management
-- [ ] Fresh Lichess account, upgraded to BOT via API
-- [ ] lichess-bot cloned into `lichess-bot/`, `config.yml` set (token, engine dir); confirm `git status` shows nothing from `lichess-bot/` before first run
-- [ ] First game played; initial rating logged below
+- [x] Fresh Lichess account, upgraded to BOT via API
+- [x] lichess-bot cloned into `lichess-bot/`, `config.yml` set (token, engine dir); confirm `git status` shows nothing from `lichess-bot/` before first run
+- [x] First game played; initial rating logged below
 
 ## v1.x — Search improvements, one SPRT each
 - [ ] Transposition table
@@ -44,24 +44,28 @@ Tick items as they land. Versions are git tags created by the user.
 - [ ] SPRT NNUE vs HCE; ship on pass
 - [ ] Net published as a GitHub Release asset
 
+Machines: `PC` is an AMD Ryzen 5 5600X on Windows; `laptop` is the Linux development laptop.
+
 ## Lichess rating log
-| Date | Version | Bullet | Blitz | Rapid |
-|------|---------|--------|-------|-------|
+| Date | Version | Machine | Bullet | Blitz | Rapid |
+|------|---------|---------|--------|-------|-------|
+| 2026-11-15 | v1.0 | PC | 2156 (12 games) | 2185 (12 games) | – (unplayed) |
 
 ## Bench log
-| Date | Change | Nodes | NPS |
-|------|--------|-------|-----|
-| 2026-11-02 | First bench: iterative deepening, alpha-beta, material eval; 10 positions at depth 5 | 10503664 | 21.2M |
-| 2026-11-05 | MVV-LVA move ordering | 686199 | 9.1M |
-| 2026-11-05 | Quiescence search | 942116 | 18.5M |
-| 2026-11-05 | PeSTO tapered eval | 1202200 | 5.3M |
+| Date | Change | Machine | Nodes | NPS |
+|------|--------|---------|-------|-----|
+| 2026-11-02 | First bench: iterative deepening, alpha-beta, material eval; 10 positions at depth 5 | laptop | 10503664 | 21.2M |
+| 2026-11-05 | MVV-LVA move ordering | laptop | 686199 | 9.1M |
+| 2026-11-05 | Quiescence search | laptop | 942116 | 18.5M |
+| 2026-11-05 | PeSTO tapered eval | laptop | 1202200 | 5.3M |
+| 2026-11-15 | Portability check: v1.0 built on the PC, same node count as the laptop | PC | 1202200 | 9.2M (unpinned) |
 
 ## SPRT log
-| Date | Change | Result | Games | W-L-D | Elo |
-|------|--------|--------|-------|-------|-----|
-| 2026-11-02 | Setup check: v0.2 against itself, capped at 200 games | Inconclusive, as expected (LLR 0.09) | 200 | 89-84-27 | +8.7 ± 31.8 |
-| 2026-11-05 | MVV-LVA move ordering | Pass (LLR 2.95) | 362 | 263-26-73 | +272.2 ± 37.1 |
-| 2026-11-05 | Quiescence search | Pass (LLR 2.94) | 436 | 247-45-144 | +174.2 ± 28.3 |
-| 2026-11-05 | PeSTO tapered eval | Pass (LLR 2.95) | 308 | 289-10-9 | +522.5 ± 87.2 |
-| 2026-11-05 | Soft limit at the old budget, hard limit remaining/10 | Fail (LLR -2.96) | 2648 | 913-1073-662 | -21.0 ± 11.3 |
-| 2026-11-05 | Soft limit at half the budget, hard limit remaining/10 | Pass (LLR 2.97) | 2028 | 864-668-496 | +33.7 ± 13.4 |
+| Date | Change | Machine | Result | Games | W-L-D | Elo |
+|------|--------|---------|--------|-------|-------|-----|
+| 2026-11-02 | Setup check: v0.2 against itself, capped at 200 games | laptop | Inconclusive, as expected (LLR 0.09) | 200 | 89-84-27 | +8.7 ± 31.8 |
+| 2026-11-05 | MVV-LVA move ordering | laptop | Pass (LLR 2.95) | 362 | 263-26-73 | +272.2 ± 37.1 |
+| 2026-11-05 | Quiescence search | laptop | Pass (LLR 2.94) | 436 | 247-45-144 | +174.2 ± 28.3 |
+| 2026-11-05 | PeSTO tapered eval | laptop | Pass (LLR 2.95) | 308 | 289-10-9 | +522.5 ± 87.2 |
+| 2026-11-05 | Soft limit at the old budget, hard limit remaining/10 | laptop | Fail (LLR -2.96) | 2648 | 913-1073-662 | -21.0 ± 11.3 |
+| 2026-11-05 | Soft limit at half the budget, hard limit remaining/10 | laptop | Pass (LLR 2.97) | 2028 | 864-668-496 | +33.7 ± 13.4 |
