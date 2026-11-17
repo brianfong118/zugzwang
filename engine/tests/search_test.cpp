@@ -17,9 +17,16 @@ using namespace zugzwang;
 
 namespace {
 
+// A new table for every search, so no test depends on what an earlier search stored.
+SearchInfo searchFresh(Position& pos, const SearchLimits& limits, std::stop_token stop = {},
+                       const SearchReport& report = {}) {
+    TranspositionTable tt(1);
+    return search(pos, limits, tt, stop, report);
+}
+
 SearchInfo searchFen(std::string_view fen, int depth) {
     Position pos = parse(fen);
-    SearchInfo info = search(pos, {.depth = depth});
+    SearchInfo info = searchFresh(pos, {.depth = depth});
     CHECK(pos.fen() == fen);
     return info;
 }
@@ -83,7 +90,7 @@ TEST_CASE("search returns the minimax score", "[search]") {
          }) {
         CAPTURE(fen);
         Position pos = parse(fen);
-        CHECK(search(pos, {.depth = 4}).score == minimax(pos, 4, 0));
+        CHECK(searchFresh(pos, {.depth = 4}).score == minimax(pos, 4, 0));
     }
 }
 
@@ -104,13 +111,32 @@ TEST_CASE("search finds a mate in one", "[search]") {
 
 TEST_CASE("search finds a mate in two and its pv delivers it", "[search]") {
     Position pos = parse("k7/8/2K5/8/8/8/8/7R w - - 0 1");
-    SearchInfo info = search(pos, {.depth = 4});
+    SearchInfo info = searchFresh(pos, {.depth = 4});
     CHECK(info.score == kMate - 3);
     REQUIRE(info.pv.length == 3);
     for (int i = 0; i < info.pv.length; ++i)
         REQUIRE(pos.make(info.pv.moves[i]));
     CHECK(pos.inCheck());
     CHECK_FALSE(hasLegalMove(pos));
+}
+
+TEST_CASE("the table stores mates from the node and returns them from the root", "[search]") {
+    // Mate five plies from the root, stored at ply 2, is mate in three from that node.
+    CHECK(scoreToTt(kMate - 5, 2) == kMate - 3);
+    CHECK(scoreToTt(-kMate + 5, 2) == -kMate + 3);
+    // Read at ply 4, by a transposition or the next move's search, it is mate seven plies away.
+    CHECK(scoreFromTt(kMate - 3, 4) == kMate - 7);
+    CHECK(scoreFromTt(-kMate + 3, 4) == -kMate + 7);
+    CHECK(scoreFromTt(scoreToTt(kMateInMaxPly - 1, 9), 3) == kMateInMaxPly - 1);
+}
+
+TEST_CASE("a second search reuses what the first stored", "[search]") {
+    TranspositionTable tt(16);
+    Position pos = parse(kKiwipete);
+    SearchInfo first = search(pos, {.depth = 4}, tt);
+    SearchInfo second = search(pos, {.depth = 4}, tt);
+    CHECK(second.nodes < first.nodes);
+    CHECK(second.pv.length > 0);
 }
 
 TEST_CASE("a root with no legal move scores mate or stalemate and has no pv", "[search]") {
@@ -135,7 +161,7 @@ TEST_CASE("the side a queen down repeats the position a third time", "[search]")
     play(pos, {Move(kA1, kA2), Move(kE8, kD8), Move(kA2, kA1), Move(kD8, kE8), Move(kA1, kA2),
                Move(kE8, kD8), Move(kA2, kA1)});
 
-    SearchInfo info = search(pos, {.depth = 2});
+    SearchInfo info = searchFresh(pos, {.depth = 2});
     CHECK(info.score == 0);
     REQUIRE(info.pv.length > 0);
     CHECK(info.pv.moves[0] == Move(kD8, kE8));
@@ -143,7 +169,7 @@ TEST_CASE("the side a queen down repeats the position a third time", "[search]")
 
 TEST_CASE("depth 1 completes even when a limit comes first", "[search]") {
     Position pos = parse(Position::kStartFen);
-    SearchInfo info = search(pos, {.nodes = 1});
+    SearchInfo info = searchFresh(pos, {.nodes = 1});
     CHECK(info.depth == 1);
     CHECK(info.pv.length == 1);
     CHECK(pos.fen() == Position::kStartFen);
@@ -153,22 +179,22 @@ TEST_CASE("a stop request ends an otherwise unlimited search", "[search]") {
     std::stop_source source;
     source.request_stop();
     Position pos = parse(Position::kStartFen);
-    SearchInfo info = search(pos, {}, source.get_token());
+    SearchInfo info = searchFresh(pos, {}, source.get_token());
     CHECK(info.depth >= 1);
     CHECK(info.pv.length > 0);
 }
 
 TEST_CASE("a node limit discards the iteration it interrupts", "[search]") {
     Position pos = parse(Position::kStartFen);
-    SearchInfo full = search(pos, {.depth = 3});
-    SearchInfo limited = search(pos, {.nodes = full.nodes + 1});
+    SearchInfo full = searchFresh(pos, {.depth = 3});
+    SearchInfo limited = searchFresh(pos, {.nodes = full.nodes + 1});
     CHECK(limited.depth == 3);
     CHECK(limited.nodes == full.nodes);
 }
 
 TEST_CASE("a hard time limit ends an otherwise unlimited search", "[search]") {
     Position pos = parse(Position::kStartFen);
-    SearchInfo info = search(pos, {.hardTime = std::chrono::milliseconds(20)});
+    SearchInfo info = searchFresh(pos, {.hardTime = std::chrono::milliseconds(20)});
     CHECK(info.depth >= 1);
     CHECK(info.pv.length > 0);
 }
@@ -176,22 +202,22 @@ TEST_CASE("a hard time limit ends an otherwise unlimited search", "[search]") {
 TEST_CASE("each completed depth is reported once, in order", "[search]") {
     Position pos = parse(Position::kStartFen);
     std::vector<int> depths;
-    SearchInfo last = search(pos, {.depth = 4}, {},
-                             [&](const SearchInfo& info) { depths.push_back(info.depth); });
+    SearchInfo last = searchFresh(pos, {.depth = 4}, {},
+                                  [&](const SearchInfo& info) { depths.push_back(info.depth); });
     CHECK(depths == std::vector<int>{1, 2, 3, 4});
     CHECK(last.depth == 4);
 
     depths.clear();
     Position stalemate = parse("k7/8/1Q6/8/8/8/8/7K b - - 0 1");
-    search(stalemate, {}, {}, [&](const SearchInfo& info) { depths.push_back(info.depth); });
+    searchFresh(stalemate, {}, {}, [&](const SearchInfo& info) { depths.push_back(info.depth); });
     CHECK(depths == std::vector<int>{1});
 }
 
 TEST_CASE("a soft time limit finishes the depth in progress and starts no other", "[search]") {
     Position pos = parse(Position::kStartFen);
-    SearchInfo soft = search(pos, {.softTime = std::chrono::milliseconds(0)});
+    SearchInfo soft = searchFresh(pos, {.softTime = std::chrono::milliseconds(0)});
     CHECK(soft.depth == 1);
-    CHECK(soft.nodes == search(pos, {.depth = 1}).nodes);
+    CHECK(soft.nodes == searchFresh(pos, {.depth = 1}).nodes);
 }
 
 TEST_CASE("the time budget spreads the clock and caps it when it runs low", "[search]") {

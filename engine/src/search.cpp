@@ -5,9 +5,14 @@
 
 #include <algorithm>
 #include <array>
+#include <cstdint>
+#include <optional>
 #include <utility>
 
 namespace zugzwang {
+
+// Table entries keep scores in 16 bits and depths in 8.
+static_assert(kMate <= INT16_MAX && kMaxPly <= UINT8_MAX);
 
 namespace {
 
@@ -43,6 +48,7 @@ Move pickNext(MoveList& moves, MoveScores& scores, int i) {
 
 struct Searcher {
     const SearchLimits& limits;
+    TranspositionTable& tt;
     std::stop_token stop;
     Clock::time_point start = Clock::now();
     std::uint64_t nodes = 0;
@@ -74,6 +80,16 @@ int Searcher::negamax(Position& pos, int depth, int ply, int alpha, int beta, Pv
     // The root must return a move even in a drawn position.
     if (ply > 0 && pos.isDraw(ply)) return 0;
 
+    // Only a bound outside the window ends a node, so the root and every pv node are searched.
+    std::optional<TranspositionTable::Entry> entry = ply > 0 ? tt.probe(pos.key()) : std::nullopt;
+    if (entry && entry->depth >= depth) {
+        int score = scoreFromTt(entry->score, ply);
+        if ((entry->bound & kLowerBound && score >= beta) ||
+            (entry->bound & kUpperBound && score <= alpha))
+            return score;
+    }
+
+    int originalAlpha = alpha;
     PvLine childPv;
     int best = -kInfinity;
     MoveList moves = generateMoves(pos);
@@ -98,7 +114,10 @@ int Searcher::negamax(Position& pos, int depth, int ply, int alpha, int beta, Pv
     }
 
     // No legal move: checkmate or stalemate.
-    if (best == -kInfinity) return pos.inCheck() ? -kMate + ply : 0;
+    if (best == -kInfinity) best = pos.inCheck() ? -kMate + ply : 0;
+
+    Bound bound = best >= beta ? kLowerBound : best > originalAlpha ? kExactBound : kUpperBound;
+    tt.store(pos.key(), scoreToTt(best, ply), depth, bound);
     return best;
 }
 
@@ -135,17 +154,29 @@ int Searcher::quiesce(Position& pos, int ply, int alpha, int beta) {
 
 } // namespace
 
+int scoreToTt(int score, int ply) {
+    if (score >= kMateInMaxPly) return score + ply;
+    if (score <= -kMateInMaxPly) return score - ply;
+    return score;
+}
+
+int scoreFromTt(int score, int ply) {
+    if (score >= kMateInMaxPly) return score - ply;
+    if (score <= -kMateInMaxPly) return score + ply;
+    return score;
+}
+
 TimeBudget timeBudget(std::chrono::milliseconds remaining, std::chrono::milliseconds increment) {
     std::chrono::milliseconds hard = remaining / 10;
     // A depth started past half the budget would usually end beyond it.
     return {std::min(remaining / 30 + increment, hard) / 2, hard};
 }
 
-SearchInfo search(Position& pos, const SearchLimits& limits, std::stop_token stop,
-                  const SearchReport& report) {
+SearchInfo search(Position& pos, const SearchLimits& limits, TranspositionTable& tt,
+                  std::stop_token stop, const SearchReport& report) {
     // A copied Position keeps no spare history, and make must not allocate mid-search.
     pos.reserveHistory(kMaxPly);
-    Searcher searcher{limits, stop};
+    Searcher searcher{limits, tt, stop};
     SearchInfo info;
     for (int d = 1; d <= std::min(limits.depth, kMaxPly); ++d) {
         searcher.canStop = d > 1;

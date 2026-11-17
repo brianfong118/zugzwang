@@ -143,6 +143,12 @@ TEST_CASE("stop, quit and a new go end a running search with a best move", "[uci
     CHECK(restarted.find("bestmove") != restarted.rfind("bestmove"));
 }
 
+TEST_CASE("ucinewgame ends a running search before it clears the table", "[uci]") {
+    std::string output = run("go infinite\nucinewgame\nisready\n");
+    CHECK_THAT(output, ContainsSubstring("\nbestmove "));
+    CHECK(output.find("bestmove") < output.find("readyok"));
+}
+
 TEST_CASE("go infinite holds its best move until stop, even with nothing to search", "[uci]") {
     std::string output = run("position fen k7/1Q6/1K6/8/8/8/8/8 b - - 0 1\ngo infinite\nisready\n"
                              "stop\n");

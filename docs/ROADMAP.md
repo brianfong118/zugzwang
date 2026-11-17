@@ -29,7 +29,7 @@ Tick items as they land. Versions are git tags created by the user.
 - [x] First game played; initial rating logged below
 
 ## v1.x — Search improvements, one SPRT each
-- [ ] Transposition table
+- [x] Transposition table
 - [ ] Killer + history ordering
 - [ ] Null-move pruning
 - [ ] Late move reductions
@@ -59,6 +59,7 @@ Machines: `PC` is an AMD Ryzen 5 5600X on Windows; `laptop` is the Linux develop
 | 2026-11-05 | Quiescence search | laptop | 942116 | 18.5M |
 | 2026-11-05 | PeSTO tapered eval | laptop | 1202200 | 5.3M |
 | 2026-11-15 | Portability check: v1.0 built on the PC, same node count as the laptop | PC | 1202200 | 9.2M (unpinned) |
+| 2026-11-17 | Transposition table: 64 MB, one entry per slot, cutoffs only; v1.0 baseline 9.0M pinned | PC | 934906 | 8.8M (pinned) |
 
 ## SPRT log
 | Date | Change | Machine | Result | Games | W-L-D | Elo |
@@ -69,3 +70,4 @@ Machines: `PC` is an AMD Ryzen 5 5600X on Windows; `laptop` is the Linux develop
 | 2026-11-05 | PeSTO tapered eval | laptop | Pass (LLR 2.95) | 308 | 289-10-9 | +522.5 ± 87.2 |
 | 2026-11-05 | Soft limit at the old budget, hard limit remaining/10 | laptop | Fail (LLR -2.96) | 2648 | 913-1073-662 | -21.0 ± 11.3 |
 | 2026-11-05 | Soft limit at half the budget, hard limit remaining/10 | laptop | Pass (LLR 2.97) | 2028 | 864-668-496 | +33.7 ± 13.4 |
+| 2026-11-17 | Transposition table | PC | Pass (LLR 2.95) | 632 | 327-148-157 | +101.2 ± 21.8 |

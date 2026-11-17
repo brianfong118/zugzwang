@@ -57,5 +57,6 @@ add_executable(zugzwang_tests
     tests/perft_test.cpp
     tests/position_test.cpp
     tests/search_test.cpp
+    tests/tt_test.cpp
     tests/uci_test.cpp)
 target_link_libraries(zugzwang_tests PRIVATE zugzwang_core Catch2::Catch2)

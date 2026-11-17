@@ -2,6 +2,7 @@
 
 #include "move.h"
 #include "position.h"
+#include "tt.h"
 
 #include <algorithm>
 #include <array>
@@ -19,6 +20,7 @@ using Clock = std::chrono::steady_clock;
 inline constexpr int kMaxPly = 128;
 // Mate in n plies scores kMate - n, so the search prefers the fastest mate and the slowest loss.
 inline constexpr int kMate = 32000;
+inline constexpr int kMateInMaxPly = kMate - kMaxPly;
 inline constexpr int kInfinity = kMate + 1;
 
 struct PvLine {
@@ -55,11 +57,15 @@ struct TimeBudget {
     std::chrono::milliseconds hard;
 };
 
+// The table counts mate distance from the node, so an entry stays right when read at another ply.
+int scoreToTt(int score, int ply);
+int scoreFromTt(int score, int ply);
+
 // remaining/30 + increment spreads the clock over the game; remaining/10 caps both limits.
 TimeBudget timeBudget(std::chrono::milliseconds remaining, std::chrono::milliseconds increment);
 
 // Deepens until a limit or a stop request, calling report after each depth; pos ends unchanged.
-SearchInfo search(Position& pos, const SearchLimits& limits, std::stop_token stop = {},
-                  const SearchReport& report = {});
+SearchInfo search(Position& pos, const SearchLimits& limits, TranspositionTable& tt,
+                  std::stop_token stop = {}, const SearchReport& report = {});
 
 } // namespace zugzwang

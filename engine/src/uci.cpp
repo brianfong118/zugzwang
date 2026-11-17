@@ -114,7 +114,7 @@ std::optional<GoCommand> parseGo(std::istringstream& args, Color us) {
 
 std::string formatInfo(const SearchInfo& info, Clock::duration elapsed) {
     std::string line = "info depth " + std::to_string(info.depth);
-    if (std::abs(info.score) >= kMate - kMaxPly) {
+    if (std::abs(info.score) >= kMateInMaxPly) {
         // UCI counts mates in moves, not plies, and negative when the side to move is mated.
         int plies = kMate - std::abs(info.score);
         line += " score mate " + std::to_string(info.score > 0 ? (plies + 1) / 2 : -plies / 2);
@@ -154,6 +154,7 @@ class Uci {
     // The search thread prints info and bestmove while this one answers, so every write locks.
     std::mutex outMutex_;
     Position pos_ = *Position::fromFen(Position::kStartFen);
+    TranspositionTable tt_{kHashMegabytes};
     bool infinite_ = false;
     // Declared last, so it is destroyed first: the search is stopped before what it uses goes.
     std::jthread search_;
@@ -181,7 +182,7 @@ void Uci::go(std::istringstream& args) {
     infinite_ = parsed->infinite;
     search_ = std::jthread([this, pos = pos_, command = *parsed](std::stop_token stop) mutable {
         Clock::time_point start = Clock::now();
-        SearchInfo result = search(pos, command.limits, stop, [&](const SearchInfo& info) {
+        SearchInfo result = search(pos, command.limits, tt_, stop, [&](const SearchInfo& info) {
             send(formatInfo(info, Clock::now() - start));
         });
         // UCI forbids answering go infinite before stop, even if the search has nothing left.
@@ -208,6 +209,9 @@ void Uci::run(std::istream& in) {
             send("uciok");
         } else if (command == "isready") {
             send("readyok");
+        } else if (command == "ucinewgame") {
+            stopSearch();
+            tt_.clear();
         } else if (command == "position") {
             if (std::optional<Position> next = parsePosition(args))
                 pos_ = std::move(*next);

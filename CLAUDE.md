@@ -20,6 +20,7 @@ cmake --build build
 
 Debug builds (`-DCMAKE_BUILD_TYPE=Debug`) add `-fsanitize=address,undefined` on Linux only; MinGW GCC has no ASan, so CI is where sanitizers run.
 Slash commands: `/perft`, `/bench`, `/sprt [baseline] [elo1]`.
+On Windows, binaries end in `.exe` (`/sprt baseline/zugzwang.exe`). MSYS2 there has no `make`, so fastchess v1.8.2-alpha was built by compiling the `SRC_FILES` in its `app/Makefile` with g++ and that Makefile's `build=release` flags, then copied to `C:\Users\Brian\.local\bin`.
 
 ## Git rules
 - Never run `git commit`, `git push`, or any command that rewrites history or discards work. `git status`, `diff`, `log`, `add` only.

@@ -32,6 +32,7 @@ Speed is about 21 million nodes per second from the start position and 27 millio
 - **Hashing:** a Zobrist key updated incrementally on every move.
 - **Search:** iterative-deepening negamax with alpha-beta pruning on its own thread, so `stop` works mid-search. Mates score by distance, and repetitions and the fifty-move rule score as draws.
 - **Move ordering:** captures first, most valuable victim and then least valuable attacker (MVV-LVA). Moves are picked one at a time, so a cutoff skips ordering the rest.
+- **Transposition table:** 64 MB of earlier results keyed by the Zobrist hash and kept between moves, so a position reached again by another move order, or on the next move, can be settled without searching it again.
 - **Quiescence:** at the end of the main search, captures and queen promotions are played out until the position is quiet, so no position is scored mid-exchange.
 - **Evaluation:** PeSTO's piece values and piece-square tables, blending middlegame and endgame tables by the material left on the board.
 - **Time:** a budget of about a thirtieth of the remaining clock plus the increment, never more than a tenth of the clock. No new depth starts after half the budget, and the search stops mid-depth at a tenth of the clock.
