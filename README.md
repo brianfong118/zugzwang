@@ -4,7 +4,7 @@
 
 A UCI chess engine in C++20, being built one measured milestone at a time. The goal is a bot on Lichess with hand-crafted evaluation, then a self-trained NNUE.
 
-**Status: v1.0.** It searches with move ordering and quiescence, evaluates with PeSTO's tapered piece-square tables, and plays on Lichess as [zugzwang_bot](https://lichess.org/@/zugzwang_bot) through lichess-bot, where its first settled ratings were 2156 bullet and 2185 blitz. Every change meant to gain strength passed an SPRT against the build before it; the results are in the [roadmap](docs/ROADMAP.md). v1.x adds a transposition table and pruning, one measured change at a time.
+**Status: v1.0.** It searches with move ordering and quiescence, evaluates with PeSTO's tapered piece-square tables, and plays on Lichess as [zugzwang_bot](https://lichess.org/@/zugzwang_bot) through lichess-bot. Every change meant to gain strength passed an SPRT against the build before it; the results are in the [roadmap](docs/ROADMAP.md). v1.x adds a transposition table and pruning, one measured change at a time. The transposition table is in, and with it the bot's ratings settled at 2004 bullet and 1962 blitz.
 
 ## Verified move generation
 

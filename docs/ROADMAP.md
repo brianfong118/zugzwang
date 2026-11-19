@@ -50,6 +50,7 @@ Machines: `PC` is an AMD Ryzen 5 5600X on Windows; `laptop` is the Linux develop
 | Date | Version | Machine | Bullet | Blitz | Rapid |
 |------|---------|---------|--------|-------|-------|
 | 2026-11-15 | v1.0 | PC | 2156 (12 games) | 2185 (12 games) | – (unplayed) |
+| 2026-11-18 | v1.x: transposition table | PC | 2004 (29 games) | 1962 (41 games) | – (unplayed) |
 
 ## Bench log
 | Date | Change | Machine | Nodes | NPS |
