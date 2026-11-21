@@ -130,6 +130,24 @@ TEST_CASE("the table stores mates from the node and returns them from the root",
     CHECK(scoreFromTt(scoreToTt(kMateInMaxPly - 1, 9), 3) == kMateInMaxPly - 1);
 }
 
+TEST_CASE("a history entry approaches its bound and never passes it", "[search]") {
+    CHECK(updatedHistory(0, 400) == 400);
+    // Halfway to the bound, a bonus moves the entry half as far.
+    CHECK(updatedHistory(kMaxHistory / 2, 400) == kMaxHistory / 2 + 200);
+    CHECK(updatedHistory(-kMaxHistory, kMaxPly * kMaxPly) == kMaxHistory);
+
+    int high = 0;
+    int low = 0;
+    for (int i = 0; i < 1000; ++i) {
+        high = updatedHistory(high, 400);
+        low = updatedHistory(low, -400);
+        REQUIRE(high <= kMaxHistory);
+        REQUIRE(low >= -kMaxHistory);
+    }
+    CHECK(high == kMaxHistory);
+    CHECK(low == -kMaxHistory);
+}
+
 TEST_CASE("a second search reuses what the first stored", "[search]") {
     TranspositionTable tt(16);
     Position pos = parse(kKiwipete);

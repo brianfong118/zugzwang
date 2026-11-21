@@ -61,6 +61,12 @@ struct TimeBudget {
 int scoreToTt(int score, int ply);
 int scoreFromTt(int score, int ply);
 
+// History scores stay within this bound, so they rank below every killer and capture.
+inline constexpr int kMaxHistory = 1 << 14;
+
+// Scaled down near the bound it heads for, so with |bonus| <= kMaxHistory it never passes it.
+int updatedHistory(int entry, int bonus);
+
 // remaining/30 + increment spreads the clock over the game; remaining/10 caps both limits.
 TimeBudget timeBudget(std::chrono::milliseconds remaining, std::chrono::milliseconds increment);
 
