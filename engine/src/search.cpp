@@ -46,6 +46,12 @@ int mvvLva(const Position& pos, Move m) {
     return score;
 }
 
+// With only king and pawns, zugzwang is common enough that passing is no lower bound.
+bool hasNonPawnMaterial(const Position& pos) {
+    Color us = pos.sideToMove();
+    return pos.pieces(us) != (pos.pieces(us, kPawn) | pos.pieces(us, kKing));
+}
+
 // Selection, not a full sort: after an early cutoff the remaining moves are never ordered.
 Move pickNext(MoveList& moves, MoveScores& scores, int i) {
     int best = i;
@@ -73,7 +79,8 @@ struct Searcher {
     MoveScores scoreMoves(const Position& pos, const MoveList& moves, int ply) const;
     void recordQuietCutoff(const Position& pos, Move m, const MoveList& quietsTried, int depth,
                            int ply);
-    int negamax(Position& pos, int depth, int ply, int alpha, int beta, PvLine& pv);
+    int negamax(Position& pos, int depth, int ply, int alpha, int beta, PvLine& pv,
+                bool nullAllowed);
     int quiesce(Position& pos, int ply, int alpha, int beta);
 };
 
@@ -123,7 +130,8 @@ void Searcher::recordQuietCutoff(const Position& pos, Move m, const MoveList& qu
 }
 
 // Fail-soft: the result may lie outside [alpha, beta], where it is a bound on the true score.
-int Searcher::negamax(Position& pos, int depth, int ply, int alpha, int beta, PvLine& pv) {
+int Searcher::negamax(Position& pos, int depth, int ply, int alpha, int beta, PvLine& pv,
+                      bool nullAllowed) {
     pv.length = 0;
     if (depth == 0) return quiesce(pos, ply, alpha, beta);
     ++nodes;
@@ -140,8 +148,22 @@ int Searcher::negamax(Position& pos, int depth, int ply, int alpha, int beta, Pv
             return score;
     }
 
-    int originalAlpha = alpha;
     PvLine childPv;
+    bool inCheck = pos.inCheck();
+    // Passing is rarely best, so reaching beta after giving a free move means a real move would.
+    if (limits.forwardPruning && nullAllowed && ply > 0 && depth >= 2 && !inCheck &&
+        hasNonPawnMaterial(pos) && evaluate(pos) >= beta) {
+        int reduction = 3 + depth / 4;
+        pos.makeNull();
+        int score = -negamax(pos, std::max(depth - 1 - reduction, 0), ply + 1, -beta, -beta + 1,
+                             childPv, false);
+        pos.unmakeNull();
+        if (stopped) return 0;
+        // A mate behind a pass is unproven, but the pass still shows the node reaches beta.
+        if (score >= beta) return score >= kMateInMaxPly ? beta : score;
+    }
+
+    int originalAlpha = alpha;
     int best = -kInfinity;
     MoveList moves = generateMoves(pos);
     MoveScores scores = scoreMoves(pos, moves, ply);
@@ -150,7 +172,7 @@ int Searcher::negamax(Position& pos, int depth, int ply, int alpha, int beta, Pv
         Move m = pickNext(moves, scores, i);
         bool quiet = isQuiet(pos, m);
         if (!pos.make(m)) continue;
-        int score = -negamax(pos, depth - 1, ply + 1, -beta, -alpha, childPv);
+        int score = -negamax(pos, depth - 1, ply + 1, -beta, -alpha, childPv, true);
         pos.unmake(m);
         if (stopped) return 0;
 
@@ -171,7 +193,7 @@ int Searcher::negamax(Position& pos, int depth, int ply, int alpha, int beta, Pv
     }
 
     // No legal move: checkmate or stalemate.
-    if (best == -kInfinity) best = pos.inCheck() ? -kMate + ply : 0;
+    if (best == -kInfinity) best = inCheck ? -kMate + ply : 0;
 
     Bound bound = best >= beta ? kLowerBound : best > originalAlpha ? kExactBound : kUpperBound;
     tt.store(pos.key(), scoreToTt(best, ply), depth, bound);
@@ -242,7 +264,7 @@ SearchInfo search(Position& pos, const SearchLimits& limits, TranspositionTable&
     for (int d = 1; d <= std::min(limits.depth, kMaxPly); ++d) {
         searcher.canStop = d > 1;
         PvLine pv;
-        int score = searcher.negamax(pos, d, 0, -kInfinity, kInfinity, pv);
+        int score = searcher.negamax(pos, d, 0, -kInfinity, kInfinity, pv, true);
         if (searcher.stopped) break;
 
         info = {d, score, searcher.nodes, pv};

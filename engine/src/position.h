@@ -60,6 +60,10 @@ class Position {
     [[nodiscard]] bool make(Move m);
     void unmake(Move m);
 
+    // Illegal in check, since passing would leave the king attacked.
+    void makeNull();
+    void unmakeNull();
+
     // Full recompute, for checking the incrementally maintained key.
     Key computeKey() const;
 
@@ -71,6 +75,7 @@ class Position {
     struct Undo {
         Key key;
         int halfmoveClock;
+        int pliesFromNull;
         Square epSquare;
         std::uint8_t castling;
         Piece captured;
@@ -96,6 +101,8 @@ class Position {
     std::uint8_t castling_ = kNoCastling;
     Square epSquare_ = kNoSquare;
     int halfmoveClock_ = 0;
+    // History entries since setup or the last null move; a repetition never spans a pass.
+    int pliesFromNull_ = 0;
     int fullmoveNumber_ = 1;
     Key key_ = 0;
 };

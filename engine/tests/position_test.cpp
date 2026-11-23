@@ -319,6 +319,30 @@ TEST_CASE("random games keep all state consistent and unwind to the start", "[ma
     }
 }
 
+TEST_CASE("a null move passes the turn, drops en passant, and unmakes", "[make]") {
+    struct Case {
+        std::string_view fen;
+        std::string_view after;
+    };
+    for (const Case& c : std::initializer_list<Case>{
+             // White could have taken en passant, so the key loses the en passant file too.
+             {"4k3/8/8/3pP3/8/8/8/4K3 w - d6 0 2", "4k3/8/8/3pP3/8/8/8/4K3 b - - 1 2"},
+             // A pass is not a capture or pawn move, and Black passing ends the full move.
+             {"4k3/8/8/8/8/8/8/R3K3 b - - 7 30", "4k3/8/8/8/8/8/8/R3K3 w - - 8 31"}}) {
+        CAPTURE(c.fen);
+        Position pos = parse(c.fen);
+        Key before = pos.key();
+
+        pos.makeNull();
+        CHECK(pos.fen() == c.after);
+        requireMatchesFreshParse(pos);
+
+        pos.unmakeNull();
+        CHECK(pos.fen() == c.fen);
+        CHECK(pos.key() == before);
+    }
+}
+
 TEST_CASE("the fifty-move rule draws once the halfmove clock reaches 100", "[draw]") {
     Position pos = parse("4k3/8/8/8/8/8/P7/R3K3 w - - 99 80");
     CHECK_FALSE(pos.isDraw(0));
@@ -326,6 +350,10 @@ TEST_CASE("the fifty-move rule draws once the halfmove clock reaches 100", "[dra
     CHECK_FALSE(pos.isDraw(1));
     pos.unmake(Move(kA2, kA3));
     REQUIRE(pos.make(Move(kA1, kB1)));
+    CHECK(pos.isDraw(1));
+    pos.unmake(Move(kA1, kB1));
+    // A pass counts too, so a null-move search sees the draw.
+    pos.makeNull();
     CHECK(pos.isDraw(1));
 }
 
@@ -346,4 +374,22 @@ TEST_CASE("a repeat reaching back before the root needs a third occurrence", "[d
     CHECK_FALSE(pos.isDraw(0));
     play(pos, cycle);
     CHECK(pos.isDraw(0));
+}
+
+TEST_CASE("a repeat never spans a null move", "[draw]") {
+    // White passes twice as Black's knight goes out and back, so the position after e2e4 returns.
+    Position pos = parse(Position::kStartFen);
+    play(pos, {Move(kE2, kE4)});
+    Key afterE4 = pos.key();
+    play(pos, {Move(kG8, kF6)});
+    pos.makeNull();
+    play(pos, {Move(kF6, kG8)});
+    pos.makeNull();
+    CHECK(pos.key() == afterE4);
+    CHECK_FALSE(pos.isDraw(5));
+
+    // A repeat after the last pass still counts.
+    play(pos, {Move(kG8, kF6), Move(kG1, kF3), Move(kF6, kG8), Move(kF3, kG1)});
+    CHECK(pos.key() == afterE4);
+    CHECK(pos.isDraw(9));
 }

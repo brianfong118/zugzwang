@@ -79,7 +79,7 @@ std::pair<long long, long long> budget(long long remaining, long long increment)
 
 // Alpha-beta skips only lines that cannot change the result, whatever order it tries moves in.
 // Endgames only: unpruned quiescence passes 200M nodes on Kiwipete even at depth 1.
-TEST_CASE("search returns the minimax score", "[search]") {
+TEST_CASE("search without forward pruning returns the minimax score", "[search]") {
     for (std::string_view fen : std::initializer_list<std::string_view>{
              kPosition3,
              "1K6/1P1k4/8/8/8/8/r7/2R5 w - - 0 1",
@@ -90,8 +90,23 @@ TEST_CASE("search returns the minimax score", "[search]") {
          }) {
         CAPTURE(fen);
         Position pos = parse(fen);
-        CHECK(searchFresh(pos, {.depth = 4}).score == minimax(pos, 4, 0));
+        CHECK(searchFresh(pos, {.depth = 4, .forwardPruning = false}).score == minimax(pos, 4, 0));
     }
+}
+
+TEST_CASE("null-move pruning cuts the tree, and only when switched on", "[search]") {
+    Position pos = parse(Position::kStartFen);
+    CHECK(searchFresh(pos, {.depth = 6}).nodes <
+          searchFresh(pos, {.depth = 6, .forwardPruning = false}).nodes);
+}
+
+TEST_CASE("a side with only king and pawns never passes", "[search]") {
+    // The pawns are blocked, so neither side can promote within the search.
+    Position pos = parse("8/k7/3p4/p2P1p2/P2P1P2/8/8/K7 w - - 0 1");
+    SearchInfo pruned = searchFresh(pos, {.depth = 6});
+    SearchInfo unpruned = searchFresh(pos, {.depth = 6, .forwardPruning = false});
+    CHECK(pruned.nodes == unpruned.nodes);
+    CHECK(pruned.score == unpruned.score);
 }
 
 TEST_CASE("search sees the recapture beyond its depth", "[search]") {

@@ -212,7 +212,7 @@ bool Position::isDraw(int ply) const {
 
     // history_[n - i] is the position i plies ago; DESIGN.md says why only these i are scanned.
     int n = int(history_.size());
-    int end = std::min(halfmoveClock_, n);
+    int end = std::min(halfmoveClock_, pliesFromNull_);
     int beforeRoot = 0;
     for (int i = 4; i <= end; i += 2)
         if (history_[n - i].key == key_ && (i < ply || ++beforeRoot == 2)) return true;
@@ -228,7 +228,8 @@ bool Position::make(Move m) {
         return false;
 
     Piece moved = board_[from], captured = board_[to];
-    history_.push_back({key_, halfmoveClock_, epSquare_, castling_, captured});
+    history_.push_back({key_, halfmoveClock_, pliesFromNull_, epSquare_, castling_, captured});
+    ++pliesFromNull_;
 
     // epKey depends on the side to move and the pawns, so it is removed before either changes.
     key_ ^= epKey() ^ zobrist::castling(castling_) ^ zobrist::side();
@@ -280,9 +281,32 @@ void Position::unmake(Move m) {
     if (us == kBlack) --fullmoveNumber_;
     sideToMove_ = us;
     halfmoveClock_ = undo.halfmoveClock;
+    pliesFromNull_ = undo.pliesFromNull;
     epSquare_ = undo.epSquare;
     castling_ = undo.castling;
     // Restored last because putPiece and removePiece above also changed it.
+    key_ = undo.key;
+    history_.pop_back();
+}
+
+void Position::makeNull() {
+    history_.push_back({key_, halfmoveClock_, pliesFromNull_, epSquare_, castling_, kNoPiece});
+    // The en passant capture belonged to the side passing, so it lapses with the turn.
+    key_ ^= epKey() ^ zobrist::side();
+    epSquare_ = kNoSquare;
+    ++halfmoveClock_;
+    pliesFromNull_ = 0;
+    if (sideToMove_ == kBlack) ++fullmoveNumber_;
+    sideToMove_ = ~sideToMove_;
+}
+
+void Position::unmakeNull() {
+    const Undo& undo = history_.back();
+    sideToMove_ = ~sideToMove_;
+    if (sideToMove_ == kBlack) --fullmoveNumber_;
+    halfmoveClock_ = undo.halfmoveClock;
+    pliesFromNull_ = undo.pliesFromNull;
+    epSquare_ = undo.epSquare;
     key_ = undo.key;
     history_.pop_back();
 }
