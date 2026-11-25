@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <cstdint>
 #include <cstdlib>
 #include <optional>
@@ -23,6 +24,17 @@ using MoveScores = std::array<int, kMaxMoves>;
 using Killers = std::array<Move, 2>;
 // By side to move, from square and to square.
 using History = std::array<std::array<std::array<int, 64>, 64>, 2>;
+// By depth and move number, each capped at 63.
+using ReductionTable = std::array<std::array<int, 64>, 64>;
+
+// Logarithmic in both, so deep nodes and long move lists add reduction ever more slowly.
+const ReductionTable kReductions = [] {
+    ReductionTable table{};
+    for (int depth = 1; depth < 64; ++depth)
+        for (int move = 1; move < 64; ++move)
+            table[depth][move] = static_cast<int>(0.75 + std::log(depth) * std::log(move) / 2.25);
+    return table;
+}();
 
 constexpr int kSecondKillerScore = kMaxHistory + 1;
 constexpr int kFirstKillerScore = kMaxHistory + 2;
@@ -151,7 +163,7 @@ int Searcher::negamax(Position& pos, int depth, int ply, int alpha, int beta, Pv
     PvLine childPv;
     bool inCheck = pos.inCheck();
     // Passing is rarely best, so reaching beta after giving a free move means a real move would.
-    if (limits.forwardPruning && nullAllowed && ply > 0 && depth >= 2 && !inCheck &&
+    if (limits.selective && nullAllowed && ply > 0 && depth >= 2 && !inCheck &&
         hasNonPawnMaterial(pos) && evaluate(pos) >= beta) {
         int reduction = 3 + depth / 4;
         pos.makeNull();
@@ -168,11 +180,25 @@ int Searcher::negamax(Position& pos, int depth, int ply, int alpha, int beta, Pv
     MoveList moves = generateMoves(pos);
     MoveScores scores = scoreMoves(pos, moves, ply);
     MoveList quietsTried;
+    int legalMoves = 0;
     for (int i = 0; i < moves.size(); ++i) {
         Move m = pickNext(moves, scores, i);
         bool quiet = isQuiet(pos, m);
         if (!pos.make(m)) continue;
-        int score = -negamax(pos, depth - 1, ply + 1, -beta, -alpha, childPv, true);
+        ++legalMoves;
+
+        // A late quiet move rarely beats alpha, so a shallower null-window search asks first.
+        int reduction = 0;
+        if (limits.selective && depth >= 3 && legalMoves > 3 && quiet && !inCheck &&
+            m != killers[ply][0] && m != killers[ply][1] && !pos.inCheck())
+            reduction =
+                std::min(kReductions[std::min(depth, 63)][std::min(legalMoves, 63)], depth - 2);
+        int score = 0;
+        if (reduction > 0)
+            score =
+                -negamax(pos, depth - 1 - reduction, ply + 1, -alpha - 1, -alpha, childPv, true);
+        if (reduction == 0 || score > alpha)
+            score = -negamax(pos, depth - 1, ply + 1, -beta, -alpha, childPv, true);
         pos.unmake(m);
         if (stopped) return 0;
 

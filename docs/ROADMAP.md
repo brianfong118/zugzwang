@@ -32,7 +32,7 @@ Tick items as they land. Versions are git tags created by the user.
 - [x] Transposition table
 - [x] Killer + history ordering
 - [x] Null-move pruning
-- [ ] Late move reductions
+- [x] Late move reductions
 - [ ] Check extensions
 - [ ] Aspiration windows
 - [ ] TT move ordering, multi-bucket TT
@@ -65,6 +65,7 @@ Machines: `PC` is an AMD Ryzen 5 5600X on Windows; `laptop` is the Linux develop
 | 2026-11-17 | Transposition table: 64 MB, one entry per slot, cutoffs only; v1.0 baseline 9.0M pinned | PC | 934906 | 8.8M (pinned) |
 | 2026-11-19 | Killer + history ordering: two killers per ply, butterfly history with gravity and malus; TT baseline 8.5M pinned | PC | 591710 | 8.3M (pinned) |
 | 2026-11-23 | Null-move pruning: R = 3 + depth/4 from depth 2, not in check, after a pass or with only king and pawns; killer baseline 8.5M unpinned | PC | 429328 | 8.5M (unpinned) |
+| 2026-11-25 | Late move reductions: quiet non-killers from the fourth legal move at depth 3+, not in or giving check, R = 0.75 + ln(depth) ln(move)/2.25 capped at depth − 2; null-move baseline 8.5M pinned | PC | 138168 | 8.1M (pinned) |
 
 ## SPRT log
 | Date | Change | Machine | Result | Games | W-L-D | Elo |
@@ -78,3 +79,4 @@ Machines: `PC` is an AMD Ryzen 5 5600X on Windows; `laptop` is the Linux develop
 | 2026-11-17 | Transposition table | PC | Pass (LLR 2.95) | 632 | 327-148-157 | +101.2 ± 21.8 |
 | 2026-11-19 | Killer + history ordering | PC | Pass (LLR 2.95) | 464 | 293-79-92 | +173.3 ± 31.5 |
 | 2026-11-23 | Null-move pruning | PC | Pass (LLR 2.95) | 604 | 316-133-155 | +108.7 ± 22.9 |
+| 2026-11-25 | Late move reductions | PC | Pass (LLR 2.95) | 656 | 320-133-203 | +101.9 ± 22.7 |

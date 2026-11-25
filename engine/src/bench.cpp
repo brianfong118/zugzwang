@@ -10,7 +10,7 @@ namespace zugzwang {
 
 namespace {
 
-// About a fifth of a second in Release; raised as the search gets faster per depth.
+// Cheap enough to run on every change; raised as the search gets faster per depth.
 constexpr int kBenchDepth = 5;
 
 } // namespace

@@ -79,7 +79,7 @@ std::pair<long long, long long> budget(long long remaining, long long increment)
 
 // Alpha-beta skips only lines that cannot change the result, whatever order it tries moves in.
 // Endgames only: unpruned quiescence passes 200M nodes on Kiwipete even at depth 1.
-TEST_CASE("search without forward pruning returns the minimax score", "[search]") {
+TEST_CASE("search without selectivity returns the minimax score", "[search]") {
     for (std::string_view fen : std::initializer_list<std::string_view>{
              kPosition3,
              "1K6/1P1k4/8/8/8/8/r7/2R5 w - - 0 1",
@@ -90,23 +90,33 @@ TEST_CASE("search without forward pruning returns the minimax score", "[search]"
          }) {
         CAPTURE(fen);
         Position pos = parse(fen);
-        CHECK(searchFresh(pos, {.depth = 4, .forwardPruning = false}).score == minimax(pos, 4, 0));
+        CHECK(searchFresh(pos, {.depth = 4, .selective = false}).score == minimax(pos, 4, 0));
     }
 }
 
-TEST_CASE("null-move pruning cuts the tree, and only when switched on", "[search]") {
-    Position pos = parse(Position::kStartFen);
-    CHECK(searchFresh(pos, {.depth = 6}).nodes <
-          searchFresh(pos, {.depth = 6, .forwardPruning = false}).nodes);
+TEST_CASE("null-move pruning cuts the tree where LMR cannot act", "[search]") {
+    // The root is in check and every other node is too shallow, so nothing is reduced.
+    Position pos = parse("rnbqk1nr/pppp1ppp/8/4p3/1b2P3/3P4/PPP2PPP/RNBQKBNR w KQkq - 1 3");
+    CHECK(searchFresh(pos, {.depth = 3}).nodes <
+          searchFresh(pos, {.depth = 3, .selective = false}).nodes);
 }
 
+// The pawns are blocked, so neither side can promote within the search.
+constexpr std::string_view kBlockedPawnEnding = "8/k7/3p4/p2P1p2/P2P1P2/8/8/K7 w - - 0 1";
+
 TEST_CASE("a side with only king and pawns never passes", "[search]") {
-    // The pawns are blocked, so neither side can promote within the search.
-    Position pos = parse("8/k7/3p4/p2P1p2/P2P1P2/8/8/K7 w - - 0 1");
-    SearchInfo pruned = searchFresh(pos, {.depth = 6});
-    SearchInfo unpruned = searchFresh(pos, {.depth = 6, .forwardPruning = false});
-    CHECK(pruned.nodes == unpruned.nodes);
-    CHECK(pruned.score == unpruned.score);
+    // At depth 3 LMR has nothing to reduce: the root has three moves and the rest are too shallow.
+    Position pos = parse(kBlockedPawnEnding);
+    SearchInfo selective = searchFresh(pos, {.depth = 3});
+    SearchInfo plain = searchFresh(pos, {.depth = 3, .selective = false});
+    CHECK(selective.nodes == plain.nodes);
+    CHECK(selective.score == plain.score);
+}
+
+TEST_CASE("late move reductions cut the tree where no side can pass", "[search]") {
+    Position pos = parse(kBlockedPawnEnding);
+    CHECK(searchFresh(pos, {.depth = 6}).nodes <
+          searchFresh(pos, {.depth = 6, .selective = false}).nodes);
 }
 
 TEST_CASE("search sees the recapture beyond its depth", "[search]") {
@@ -126,7 +136,8 @@ TEST_CASE("search finds a mate in one", "[search]") {
 
 TEST_CASE("search finds a mate in two and its pv delivers it", "[search]") {
     Position pos = parse("k7/8/2K5/8/8/8/8/7R w - - 0 1");
-    SearchInfo info = searchFresh(pos, {.depth = 4});
+    // Kb6 is a late quiet move here, so LMR finds its mate at depth 7 rather than 4.
+    SearchInfo info = searchFresh(pos, {.depth = 7});
     CHECK(info.score == kMate - 3);
     REQUIRE(info.pv.length == 3);
     for (int i = 0; i < info.pv.length; ++i)
