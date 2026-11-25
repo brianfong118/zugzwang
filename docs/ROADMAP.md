@@ -66,6 +66,7 @@ Machines: `PC` is an AMD Ryzen 5 5600X on Windows; `laptop` is the Linux develop
 | 2026-11-19 | Killer + history ordering: two killers per ply, butterfly history with gravity and malus; TT baseline 8.5M pinned | PC | 591710 | 8.3M (pinned) |
 | 2026-11-23 | Null-move pruning: R = 3 + depth/4 from depth 2, not in check, after a pass or with only king and pawns; killer baseline 8.5M unpinned | PC | 429328 | 8.5M (unpinned) |
 | 2026-11-25 | Late move reductions: quiet non-killers from the fourth legal move at depth 3+, not in or giving check, R = 0.75 + ln(depth) ln(move)/2.25 capped at depth − 2; null-move baseline 8.5M pinned | PC | 138168 | 8.1M (pinned) |
+| 2026-11-25 | Bench depth raised from 5 to 11, no search change; same build as the row above | PC | 15055075 | 8.0M (pinned) |
 
 ## SPRT log
 | Date | Change | Machine | Result | Games | W-L-D | Elo |

@@ -11,7 +11,7 @@ namespace zugzwang {
 namespace {
 
 // Cheap enough to run on every change; raised as the search gets faster per depth.
-constexpr int kBenchDepth = 5;
+constexpr int kBenchDepth = 11;
 
 } // namespace
 
