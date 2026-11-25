@@ -52,6 +52,7 @@ Machines: `PC` is an AMD Ryzen 5 5600X on Windows; `laptop` is the Linux develop
 | 2026-11-15 | v1.0 | PC | 2156 (12 games) | 2185 (12 games) | – (unplayed) |
 | 2026-11-18 | v1.x: transposition table | PC | 2004 (29 games) | 1962 (41 games) | – (unplayed) |
 | 2026-11-22 | v1.x: killer + history ordering | PC | 2030 (33 games) | 1990 (40 games) | – (unplayed) |
+| 2026-11-24 | v1.x: null-move pruning | PC | 2094 (46 games) | 2026 (61 games) | – (unplayed) |
 
 ## Bench log
 | Date | Change | Machine | Nodes | NPS |
