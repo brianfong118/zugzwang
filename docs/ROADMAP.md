@@ -33,7 +33,8 @@ Tick items as they land. Versions are git tags created by the user.
 - [x] Killer + history ordering
 - [x] Null-move pruning
 - [x] Late move reductions
-- [ ] Check extensions
+- [ ] Static exchange evaluation (SEE)
+- [ ] Check extensions, gated by SEE; deferred from before SEE, parked on the `check-extensions` branch
 - [ ] Aspiration windows
 - [ ] TT move ordering, multi-bucket TT
 
@@ -82,3 +83,5 @@ Machines: `PC` is an AMD Ryzen 5 5600X on Windows; `laptop` is the Linux develop
 | 2026-11-19 | Killer + history ordering | PC | Pass (LLR 2.95) | 464 | 293-79-92 | +173.3 ± 31.5 |
 | 2026-11-23 | Null-move pruning | PC | Pass (LLR 2.95) | 604 | 316-133-155 | +108.7 ± 22.9 |
 | 2026-11-25 | Late move reductions | PC | Pass (LLR 2.95) | 656 | 320-133-203 | +101.9 ± 22.7 |
+| 2026-11-26 | Check extensions, checks and evasions still exempt from LMR | PC | Fail (LLR -2.96) | 1728 | 420-567-741 | -29.6 ± 12.3 |
+| 2026-11-26 | Check extensions, late checks and evasions reduced | PC | Inconclusive, rounds ran out (LLR -1.12) | 4000 | 1097-1134-1769 | -3.2 ± 8.1 |
