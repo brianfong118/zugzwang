@@ -33,7 +33,7 @@ Tick items as they land. Versions are git tags created by the user.
 - [x] Killer + history ordering
 - [x] Null-move pruning
 - [x] Late move reductions
-- [ ] Static exchange evaluation (SEE)
+- [x] Static exchange evaluation (SEE)
 - [ ] Check extensions, gated by SEE; deferred from before SEE, parked on the `check-extensions` branch
 - [ ] Aspiration windows
 - [ ] TT move ordering, multi-bucket TT
@@ -69,6 +69,7 @@ Machines: `PC` is an AMD Ryzen 5 5600X on Windows; `laptop` is the Linux develop
 | 2026-11-23 | Null-move pruning: R = 3 + depth/4 from depth 2, not in check, after a pass or with only king and pawns; killer baseline 8.5M unpinned | PC | 429328 | 8.5M (unpinned) |
 | 2026-11-25 | Late move reductions: quiet non-killers from the fourth legal move at depth 3+, not in or giving check, R = 0.75 + ln(depth) ln(move)/2.25 capped at depth − 2; null-move baseline 8.5M pinned | PC | 138168 | 8.1M (pinned) |
 | 2026-11-25 | Bench depth raised from 5 to 11, no search change; same build as the row above | PC | 15055075 | 8.0M (pinned) |
+| 2026-11-26 | SEE pruning in quiescence: captures with SEE below 0 skipped, values 100/300/300/500/900; LMR baseline 8.0M pinned | PC | 9524360 | 6.8M (pinned) |
 
 ## SPRT log
 | Date | Change | Machine | Result | Games | W-L-D | Elo |
@@ -85,3 +86,4 @@ Machines: `PC` is an AMD Ryzen 5 5600X on Windows; `laptop` is the Linux develop
 | 2026-11-25 | Late move reductions | PC | Pass (LLR 2.95) | 656 | 320-133-203 | +101.9 ± 22.7 |
 | 2026-11-26 | Check extensions, checks and evasions still exempt from LMR | PC | Fail (LLR -2.96) | 1728 | 420-567-741 | -29.6 ± 12.3 |
 | 2026-11-26 | Check extensions, late checks and evasions reduced | PC | Inconclusive, rounds ran out (LLR -1.12) | 4000 | 1097-1134-1769 | -3.2 ± 8.1 |
+| 2026-11-26 | Static exchange evaluation, pruning losing captures in quiescence | PC | Pass (LLR 2.98) | 1762 | 579-416-767 | +32.2 ± 11.9 |

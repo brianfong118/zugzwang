@@ -32,6 +32,7 @@ add_library(zugzwang_core STATIC
     src/perft.cpp
     src/position.cpp
     src/search.cpp
+    src/see.cpp
     src/uci.cpp)
 target_include_directories(zugzwang_core PUBLIC src)
 target_link_libraries(zugzwang_core PUBLIC zugzwang_options)
@@ -57,6 +58,7 @@ add_executable(zugzwang_tests
     tests/perft_test.cpp
     tests/position_test.cpp
     tests/search_test.cpp
+    tests/see_test.cpp
     tests/tt_test.cpp
     tests/uci_test.cpp)
 target_link_libraries(zugzwang_tests PRIVATE zugzwang_core Catch2::Catch2)

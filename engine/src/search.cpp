@@ -2,6 +2,7 @@
 
 #include "eval.h"
 #include "movegen.h"
+#include "see.h"
 
 #include <algorithm>
 #include <array>
@@ -241,6 +242,8 @@ int Searcher::quiesce(Position& pos, int ply, int alpha, int beta) {
     MoveScores scores = scoreMoves(pos, moves, ply);
     for (int i = 0; i < moves.size(); ++i) {
         Move m = pickNext(moves, scores, i);
+        // A capture that loses the exchange on its square almost never beats standing pat.
+        if (limits.selective && !seeGe(pos, m, 0)) continue;
         if (!pos.make(m)) continue;
         int score = -quiesce(pos, ply + 1, -beta, -alpha);
         pos.unmake(m);

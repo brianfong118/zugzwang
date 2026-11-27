@@ -48,7 +48,7 @@ struct SearchLimits {
     // No iteration starts after softTime; hardTime stops the search in the middle of one.
     std::optional<std::chrono::milliseconds> softTime = std::nullopt;
     std::optional<std::chrono::milliseconds> hardTime = std::nullopt;
-    // Null-move pruning and LMR search some lines shallower, so the minimax test turns them off.
+    // Null-move pruning, LMR and SEE pruning are inexact, so the minimax test turns them off.
     bool selective = true;
 };
 

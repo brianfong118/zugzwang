@@ -94,9 +94,9 @@ TEST_CASE("search without selectivity returns the minimax score", "[search]") {
     }
 }
 
-TEST_CASE("null-move pruning cuts the tree where LMR cannot act", "[search]") {
-    // The root is in check and every other node is too shallow, so nothing is reduced.
-    Position pos = parse("rnbqk1nr/pppp1ppp/8/4p3/1b2P3/3P4/PPP2PPP/RNBQKBNR w KQkq - 1 3");
+TEST_CASE("null-move pruning cuts the tree where LMR and SEE cannot act", "[search]") {
+    // White's lone king is in check, so SEE prunes nothing and LMR reduces nothing.
+    Position pos = parse("6k1/8/8/8/8/8/8/2r1K3 w - - 0 1");
     CHECK(searchFresh(pos, {.depth = 3}).nodes <
           searchFresh(pos, {.depth = 3, .selective = false}).nodes);
 }
@@ -117,6 +117,13 @@ TEST_CASE("late move reductions cut the tree where no side can pass", "[search]"
     Position pos = parse(kBlockedPawnEnding);
     CHECK(searchFresh(pos, {.depth = 6}).nodes <
           searchFresh(pos, {.depth = 6, .selective = false}).nodes);
+}
+
+TEST_CASE("quiescence skips captures that lose the exchange", "[search]") {
+    // At depth 1 null-move pruning and LMR cannot act, so only quiescence's pruning differs.
+    Position pos = parse(kKiwipete);
+    CHECK(searchFresh(pos, {.depth = 1}).nodes <
+          searchFresh(pos, {.depth = 1, .selective = false}).nodes);
 }
 
 TEST_CASE("search sees the recapture beyond its depth", "[search]") {
